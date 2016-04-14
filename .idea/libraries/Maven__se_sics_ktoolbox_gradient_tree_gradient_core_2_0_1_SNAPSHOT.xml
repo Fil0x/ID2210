@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: se.sics.ktoolbox.gradient:tree-gradient-core:2.0.1-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/se/sics/ktoolbox/gradient/tree-gradient-core/2.0.1-SNAPSHOT/tree-gradient-core-2.0.1-20160411.094128-2.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/se/sics/ktoolbox/gradient/tree-gradient-core/2.0.1-SNAPSHOT/tree-gradient-core-2.0.1-20160411.094128-2-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/se/sics/ktoolbox/gradient/tree-gradient-core/2.0.1-SNAPSHOT/tree-gradient-core-2.0.1-20160411.094128-2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

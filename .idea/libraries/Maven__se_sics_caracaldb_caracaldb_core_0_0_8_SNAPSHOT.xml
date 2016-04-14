@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: se.sics.caracaldb:caracaldb-core:0.0.8-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/se/sics/caracaldb/caracaldb-core/0.0.8-SNAPSHOT/caracaldb-core-0.0.8-20150921.132439-2.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/se/sics/caracaldb/caracaldb-core/0.0.8-SNAPSHOT/caracaldb-core-0.0.8-20150921.132439-2-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/se/sics/caracaldb/caracaldb-core/0.0.8-SNAPSHOT/caracaldb-core-0.0.8-20150921.132439-2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: se.sics.caracaldb:caracaldb-simulator:0.0.8-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/se/sics/caracaldb/caracaldb-simulator/0.0.8-SNAPSHOT/caracaldb-simulator-0.0.8-20150921.132430-2.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/se/sics/caracaldb/caracaldb-simulator/0.0.8-SNAPSHOT/caracaldb-simulator-0.0.8-20150921.132430-2-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/se/sics/caracaldb/caracaldb-simulator/0.0.8-SNAPSHOT/caracaldb-simulator-0.0.8-20150921.132430-2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

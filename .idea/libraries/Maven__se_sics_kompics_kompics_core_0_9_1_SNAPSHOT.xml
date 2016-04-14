@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: se.sics.kompics:kompics-core:0.9.1-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/se/sics/kompics/kompics-core/0.9.1-SNAPSHOT/kompics-core-0.9.1-20160119.150341-3.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/se/sics/kompics/kompics-core/0.9.1-SNAPSHOT/kompics-core-0.9.1-20160119.150341-3-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/se/sics/kompics/kompics-core/0.9.1-SNAPSHOT/kompics-core-0.9.1-20160119.150341-3-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
