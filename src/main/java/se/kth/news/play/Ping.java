@@ -17,8 +17,25 @@
  */
 package se.kth.news.play;
 
-/**
- * @author Alex Ormenisan <aaor@kth.se>
- */
 public class Ping {
+
+    private int pingId;
+    private int tTL;
+
+    public Ping(int pingId, int tTL) {
+        this.pingId = pingId;
+        this.tTL = tTL;
+    }
+
+    public int getPingId() {
+        return pingId;
+    }
+
+    public int getTTL() {
+        return tTL;
+    }
+
+    public void decTTL() {
+        tTL--;
+    }
 }

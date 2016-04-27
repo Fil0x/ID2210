@@ -17,10 +17,15 @@
  */
 package se.kth.news.play;
 
-/**
- *
- * @author Alex Ormenisan <aaor@kth.se>
- */
 public class Pong {
-    
+
+    private int pingId;
+
+    public Pong(int pingId) {
+        this.pingId = pingId;
+    }
+
+    public int getPingId() {
+        return pingId;
+    }
 }
