@@ -19,13 +19,13 @@ package se.kth.news.play;
 
 public class Pong {
 
-    private int pingId;
+    private int sequenceNumber;
 
-    public Pong(int pingId) {
-        this.pingId = pingId;
+    public Pong(int sequenceNumber) {
+        this.sequenceNumber = sequenceNumber;
     }
 
-    public int getPingId() {
-        return pingId;
+    public int getSequenceNumber() {
+        return sequenceNumber;
     }
 }

@@ -17,21 +17,29 @@
  */
 package se.kth.news.play;
 
+import se.sics.ktoolbox.util.network.KAddress;
+
 public class Ping {
 
-    private int pingId;
+    private KAddress originator;
+    private int sequenceNumber;
     private int tTL;
 
-    public Ping(int pingId, int tTL) {
-        this.pingId = pingId;
+    public Ping(KAddress originator, int sequenceNumber, int tTL) {
+        this.originator = originator;
+        this.sequenceNumber = sequenceNumber;
         this.tTL = tTL;
     }
 
-    public int getPingId() {
-        return pingId;
+    public KAddress getOriginator() {
+        return originator;
     }
 
-    public int getTTL() {
+    public int getSequenceNumber() {
+        return sequenceNumber;
+    }
+
+    public int gettTL() {
         return tTL;
     }
 

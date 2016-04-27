@@ -17,8 +17,7 @@
  */
 package se.kth.news.core.news;
 
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.kth.news.core.leader.LeaderSelectPort;
@@ -48,14 +47,14 @@ import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdate;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 
-/**
- * @author Alex Ormenisan <aaor@kth.se>
- */
 public class NewsComp extends ComponentDefinition {
 
+    //*******************************NODE_SETUP*********************************
+    public static final int NUMBER_OF_NODES = 100;
+    public static final int TTL = 5;
+    //*******************************LOGGING************************************
     private static final Logger LOG = LoggerFactory.getLogger(NewsComp.class);
     private String logPrefix = " ";
-
     //*******************************CONNECTIONS********************************
     Positive<Timer> timerPort = requires(Timer.class);
     Positive<Network> networkPort = requires(Network.class);
@@ -68,6 +67,10 @@ public class NewsComp extends ComponentDefinition {
     private Identifier gradientOId;
     //*******************************INTERNAL_STATE*****************************
     private NewsView localNewsView;
+    private CroupierSample<NewsView> croupierSample;
+    private int sequenceNumber = 0;
+    private Map<Integer, Set<String>> newsCoverage = new HashMap<>();
+    private Map<String, Set<Integer>> nodeKnowledge = new HashMap<>();
 
     public NewsComp(Init init) {
         selfAdr = init.selfAdr;
@@ -101,14 +104,46 @@ public class NewsComp extends ComponentDefinition {
     Handler handleCroupierSample = new Handler<CroupierSample<NewsView>>() {
         @Override
         public void handle(CroupierSample<NewsView> castSample) {
-            if (castSample.publicSample.isEmpty()) {
+            croupierSample = castSample;
+            sequenceNumber += 1;
+            if (!selfAdr.getId().toString().equals("1") || croupierSample.publicSample.isEmpty() || sequenceNumber < 100) {
                 return;
             }
-            Iterator<Identifier> it = castSample.publicSample.keySet().iterator();
-            KAddress partner = castSample.publicSample.get(it.next()).getSource();
-            KHeader header = new BasicHeader(selfAdr, partner, Transport.UDP);
-            KContentMsg msg = new BasicContentMsg(header, new Ping());
-            trigger(msg, networkPort);
+
+            // Print results
+            int numberOfNews = newsCoverage.keySet().size();
+            if (numberOfNews > 0) {
+
+                double coverageSum = 0;
+                for (int newsItem : newsCoverage.keySet()) {
+                    int nodes = newsCoverage.get(newsItem).size();
+                    double nodesPercent = 100 * nodes / NUMBER_OF_NODES;
+                    coverageSum += nodesPercent;
+                }
+
+                double knowledgeSum = 0;
+                List<Integer> knowledgeList = new LinkedList<>();
+                for (String node : nodeKnowledge.keySet()) {
+                    int news = nodeKnowledge.get(node).size();
+                    double newsPercent = 100 * news / numberOfNews;
+                    knowledgeSum += newsPercent;
+                    knowledgeList.add((int) newsPercent);
+                }
+
+                System.out.println("\nnumber of news\t" + numberOfNews);
+                System.out.println("news coverage\t" + (int) coverageSum / numberOfNews);
+                System.out.println("node knowledge\t" + (int) knowledgeSum / NUMBER_OF_NODES);
+                System.out.println("for each node\t" + knowledgeList);
+            }
+
+            // Disseminate "news"
+            newsCoverage.put(sequenceNumber, new HashSet<String>());
+            for (Identifier key : croupierSample.publicSample.keySet()) {
+                KAddress partner = croupierSample.publicSample.get(key).getSource();
+                KHeader header = new BasicHeader(selfAdr, partner, Transport.UDP);
+                KContentMsg msg = new BasicContentMsg(header, new Ping(selfAdr, sequenceNumber, TTL));
+                trigger(msg, networkPort);
+            }
         }
     };
 
@@ -129,8 +164,21 @@ public class NewsComp extends ComponentDefinition {
 
                 @Override
                 public void handle(Ping content, KContentMsg<?, ?, Ping> container) {
-                    LOG.info("{}received ping from:{}", logPrefix, container.getHeader().getSource());
-                    trigger(container.answer(new Pong()), networkPort);
+                    LOG.debug("{}received ping from:{}", logPrefix, container.getHeader().getSource().getId());
+                    // Forward Ping
+                    content.decTTL();
+                    if (content.gettTL() > 0) {
+                        for (Identifier key : croupierSample.publicSample.keySet()) {
+                            KAddress partner = croupierSample.publicSample.get(key).getSource();
+                            KHeader pingHeader = new BasicHeader(selfAdr, partner, Transport.UDP);
+                            KContentMsg pingMsg = new BasicContentMsg(pingHeader, content);
+                            trigger(pingMsg, networkPort);
+                        }
+                    }
+                    // Send Pong
+                    KHeader pongHeader = new BasicHeader(selfAdr, content.getOriginator(), Transport.UDP);
+                    KContentMsg pongMsg = new BasicContentMsg(pongHeader, new Pong(content.getSequenceNumber()));
+                    trigger(pongMsg, networkPort);
                 }
             };
 
@@ -139,7 +187,13 @@ public class NewsComp extends ComponentDefinition {
 
                 @Override
                 public void handle(Pong content, KContentMsg<?, KHeader<?>, Pong> container) {
-                    LOG.info("{}received pong from:{}", logPrefix, container.getHeader().getSource());
+                    LOG.debug("{}received pong from:{}", logPrefix, container.getHeader().getSource().getId());
+                    String pongSource = container.getHeader().getSource().getId().toString();
+                    newsCoverage.get(content.getSequenceNumber()).add(pongSource);
+                    if (nodeKnowledge.get(pongSource) == null) {
+                        nodeKnowledge.put(pongSource, new HashSet<Integer>());
+                    }
+                    nodeKnowledge.get(pongSource).add(content.getSequenceNumber());
                 }
             };
 
