@@ -21,22 +21,22 @@ import se.sics.ktoolbox.util.network.KAddress;
 
 public class Ping {
 
-    private KAddress originator;
-    private int sequenceNumber;
+    private KAddress origin;
+    private int seqNum;
     private int tTL;
 
-    public Ping(KAddress originator, int sequenceNumber, int tTL) {
-        this.originator = originator;
-        this.sequenceNumber = sequenceNumber;
+    public Ping(KAddress origin, int seqNum, int tTL) {
+        this.origin = origin;
+        this.seqNum = seqNum;
         this.tTL = tTL;
     }
 
-    public KAddress getOriginator() {
-        return originator;
+    public KAddress getOrigin() {
+        return origin;
     }
 
-    public int getSequenceNumber() {
-        return sequenceNumber;
+    public int getSeqNum() {
+        return seqNum;
     }
 
     public int gettTL() {

@@ -171,7 +171,10 @@ public class NewsComp extends ComponentDefinition {
                         for (Identifier key : croupierSample.publicSample.keySet()) {
                             KAddress partner = croupierSample.publicSample.get(key).getSource();
                             // don't send back nor to the originator
-                            if (!partner.equals(container.getHeader().getSource()) && !partner.equals(content.getOriginator())) {
+                            String partnerId = getId(partner);
+                            String sourceId  = getId(container.getHeader().getSource());
+                            String originId  = getId(content.getOrigin());
+                            if (!partnerId.equals(sourceId) && !partnerId.equals(originId)) {
                                 KHeader pingHeader = new BasicHeader(selfAdr, partner, Transport.UDP);
                                 KContentMsg pingMsg = new BasicContentMsg(pingHeader, content);
                                 trigger(pingMsg, networkPort);
@@ -179,8 +182,8 @@ public class NewsComp extends ComponentDefinition {
                         }
                     }
                     // Send Pong
-                    KHeader pongHeader = new BasicHeader(selfAdr, content.getOriginator(), Transport.UDP);
-                    KContentMsg pongMsg = new BasicContentMsg(pongHeader, new Pong(content.getSequenceNumber()));
+                    KHeader pongHeader = new BasicHeader(selfAdr, content.getOrigin(), Transport.UDP);
+                    KContentMsg pongMsg = new BasicContentMsg(pongHeader, new Pong(content.getSeqNum()));
                     trigger(pongMsg, networkPort);
                 }
             };
@@ -191,14 +194,18 @@ public class NewsComp extends ComponentDefinition {
                 @Override
                 public void handle(Pong content, KContentMsg<?, KHeader<?>, Pong> container) {
                     LOG.debug("{}received pong from:{}", logPrefix, container.getHeader().getSource().getId());
-                    String pongSource = container.getHeader().getSource().getId().toString();
-                    newsCoverage.get(content.getSequenceNumber()).add(pongSource);
-                    if (nodeKnowledge.get(pongSource) == null) {
-                        nodeKnowledge.put(pongSource, new HashSet<Integer>());
+                    String sourceId = getId(container.getHeader().getSource());
+                    newsCoverage.get(content.getSequenceNumber()).add(sourceId);
+                    if (nodeKnowledge.get(sourceId) == null) {
+                        nodeKnowledge.put(sourceId, new HashSet<Integer>());
                     }
-                    nodeKnowledge.get(pongSource).add(content.getSequenceNumber());
+                    nodeKnowledge.get(sourceId).add(content.getSequenceNumber());
                 }
             };
+
+    private String getId(KAddress kAddress) {
+        return kAddress.getId().toString();
+    }
 
     public static class Init extends se.sics.kompics.Init<NewsComp> {
 
