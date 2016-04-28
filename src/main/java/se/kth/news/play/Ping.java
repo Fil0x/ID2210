@@ -39,7 +39,7 @@ public class Ping {
         return seqNum;
     }
 
-    public int gettTL() {
+    public int getTTL() {
         return tTL;
     }
 

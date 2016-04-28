@@ -167,7 +167,7 @@ public class NewsComp extends ComponentDefinition {
                     LOG.debug("{}received ping from:{}", logPrefix, container.getHeader().getSource().getId());
                     // Forward Ping
                     content.decTTL();
-                    if (content.gettTL() > 0) {
+                    if (content.getTTL() > 0) {
                         for (Identifier key : croupierSample.publicSample.keySet()) {
                             KAddress partner = croupierSample.publicSample.get(key).getSource();
                             // don't send back nor to the originator
