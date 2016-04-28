@@ -195,11 +195,11 @@ public class NewsComp extends ComponentDefinition {
                 public void handle(Pong content, KContentMsg<?, KHeader<?>, Pong> container) {
                     LOG.debug("{}received pong from:{}", logPrefix, container.getHeader().getSource().getId());
                     String sourceId = getId(container.getHeader().getSource());
-                    newsCoverage.get(content.getSequenceNumber()).add(sourceId);
+                    newsCoverage.get(content.getSeqNum()).add(sourceId);
                     if (nodeKnowledge.get(sourceId) == null) {
                         nodeKnowledge.put(sourceId, new HashSet<Integer>());
                     }
-                    nodeKnowledge.get(sourceId).add(content.getSequenceNumber());
+                    nodeKnowledge.get(sourceId).add(content.getSeqNum());
                 }
             };
 
