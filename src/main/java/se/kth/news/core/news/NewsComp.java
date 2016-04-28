@@ -69,8 +69,8 @@ public class NewsComp extends ComponentDefinition {
     private NewsView localNewsView;
     private CroupierSample<NewsView> croupierSample;
     private int sequenceNumber = 0;
-    private Map<Integer, Set<String>> newsCoverage = new HashMap<>();
-    private Map<String, Set<Integer>> nodeKnowledge = new HashMap<>();
+    private Map<Integer, Set<String>> newsCoverage = new HashMap<>();  // news item -> {nodes}
+    private Map<String, Set<Integer>> nodeKnowledge = new HashMap<>(); // node -> {news items}
 
     public NewsComp(Init init) {
         selfAdr = init.selfAdr;
@@ -170,9 +170,12 @@ public class NewsComp extends ComponentDefinition {
                     if (content.gettTL() > 0) {
                         for (Identifier key : croupierSample.publicSample.keySet()) {
                             KAddress partner = croupierSample.publicSample.get(key).getSource();
-                            KHeader pingHeader = new BasicHeader(selfAdr, partner, Transport.UDP);
-                            KContentMsg pingMsg = new BasicContentMsg(pingHeader, content);
-                            trigger(pingMsg, networkPort);
+                            // don't send back nor to the originator
+                            if (!partner.equals(container.getHeader().getSource()) && !partner.equals(content.getOriginator())) {
+                                KHeader pingHeader = new BasicHeader(selfAdr, partner, Transport.UDP);
+                                KContentMsg pingMsg = new BasicContentMsg(pingHeader, content);
+                                trigger(pingMsg, networkPort);
+                            }
                         }
                     }
                     // Send Pong
