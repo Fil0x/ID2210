@@ -38,12 +38,14 @@ import se.sics.ktoolbox.croupier.CroupierPort;
 import se.sics.ktoolbox.croupier.event.CroupierSample;
 import se.sics.ktoolbox.gradient.GradientPort;
 import se.sics.ktoolbox.gradient.event.TGradientSample;
+import se.sics.ktoolbox.gradient.util.GradientContainer;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.ktoolbox.util.other.Container;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdate;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 
@@ -51,7 +53,7 @@ public class NewsComp extends ComponentDefinition {
 
     //*******************************NODE_SETUP*********************************
     public static final int NUMBER_OF_NODES = 100;
-    public static final int TTL = 5;
+    public static final int TTL = 10;
     //*******************************LOGGING************************************
     private static final Logger LOG = LoggerFactory.getLogger(NewsComp.class);
     private String logPrefix = " ";
@@ -130,10 +132,10 @@ public class NewsComp extends ComponentDefinition {
                     knowledgeList.add((int) newsPercent);
                 }
 
-                System.out.println("\nnumber of news\t" + numberOfNews);
-                System.out.println("news coverage\t" + (int) coverageSum / numberOfNews);
-                System.out.println("node knowledge\t" + (int) knowledgeSum / NUMBER_OF_NODES);
-                System.out.println("for each node\t" + knowledgeList);
+//                System.out.println("\n(TTL) " + TTL + "\nnumber of news \t" + numberOfNews);
+//                System.out.println("news coverage\t" + (int) coverageSum / numberOfNews);
+//                System.out.println("node knowledge\t" + (int) knowledgeSum / NUMBER_OF_NODES);
+//                System.out.println("for each node\t" + knowledgeList);
             }
 
             // Disseminate "news"
@@ -150,6 +152,9 @@ public class NewsComp extends ComponentDefinition {
     Handler handleGradientSample = new Handler<TGradientSample>() {
         @Override
         public void handle(TGradientSample sample) {
+            List<GradientContainer> neighbors = sample.getGradientNeighbours();
+
+
         }
     };
 
