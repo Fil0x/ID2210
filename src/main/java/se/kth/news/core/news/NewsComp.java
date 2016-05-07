@@ -68,17 +68,14 @@ public class NewsComp extends ComponentDefinition {
     private KAddress selfAdr;
     private Identifier gradientOId;
     //*******************************INTERNAL_STATE*****************************
-    private NewsView localNewsView;
     private int sequenceNumber = 0;
 
     private Set<String> seenNews = new HashSet<>();
-    private List<Container<KAddress, NewsView>> neighbors;
-    private List<Container<KAddress, NewsView>> fingers;
 
     public NewsComp(Init init) {
         selfAdr = init.selfAdr;
         logPrefix = "<nid:" + selfAdr.getId() + ">";
-        LOG.info("{}initiating...", logPrefix);
+        LOG.debug("{}initiating...", logPrefix);
 
         gradientOId = init.gradientOId;
 
@@ -93,13 +90,13 @@ public class NewsComp extends ComponentDefinition {
     Handler handleStart = new Handler<Start>() {
         @Override
         public void handle(Start event) {
-            LOG.info("{}starting...", logPrefix);
+            LOG.debug("{}starting...", logPrefix);
             updateLocalNewsView();
         }
     };
 
     private void updateLocalNewsView() {
-        localNewsView = new NewsView(selfAdr.getId(), seenNews.size());
+        NewsView localNewsView = new NewsView(selfAdr.getId(), seenNews.size());
         LOG.debug("{}informing overlays of new view", logPrefix);
         trigger(new OverlayViewUpdate.Indication<>(gradientOId, false, localNewsView.copy()), viewUpdatePort);
     }
@@ -107,7 +104,7 @@ public class NewsComp extends ComponentDefinition {
     Handler handleCroupierSample = new Handler<CroupierSample<NewsView>>() {
         @Override
         public void handle(CroupierSample<NewsView> castSample) {
-            // ignore croupier
+            // not used
         }
     };
 
@@ -115,20 +112,21 @@ public class NewsComp extends ComponentDefinition {
         @Override
         public void handle(TGradientSample sample) {
             sequenceNumber += 1;
-            neighbors = sample.getGradientNeighbours();
-            fingers = sample.getGradientFingers();
-
-            if (selfAdr.getId().toString().equals("11") || selfAdr.getId().toString().equals("22") || selfAdr.getId().toString().equals("33") || selfAdr.getId().toString().equals("44") || selfAdr.getId().toString().equals("55") || selfAdr.getId().toString().equals("66") || selfAdr.getId().toString().equals("77") || selfAdr.getId().toString().equals("88") || selfAdr.getId().toString().equals("99")) {
-                seenNews.add(Integer.toString(sequenceNumber));
+            if (selfAdr.getId().toString().equals("29")) {
+                seenNews.add(selfAdr.getId() + ":" + sequenceNumber);
                 updateLocalNewsView();
             }
+            /*else if (Math.random() < 0.5) {
+                seenNews.add(selfAdr.getId() + ":" + sequenceNumber);
+                updateLocalNewsView();
+            }*/
         }
     };
 
     Handler handleLeader = new Handler<LeaderUpdate>() {
         @Override
         public void handle(LeaderUpdate event) {
-            LOG.info("{}New leader:{}", logPrefix, event.leaderAdr.getId());
+            LOG.info("{} new leader: {}", logPrefix, event.leaderAdr.getId());
         }
     };
 
@@ -137,7 +135,7 @@ public class NewsComp extends ComponentDefinition {
 
                 @Override
                 public void handle(Ping content, KContentMsg<?, ?, Ping> container) {
-                    LOG.debug("{}received ping from:{}", logPrefix, container.getHeader().getSource().getId());
+                    // not used
                 }
             };
 
@@ -146,7 +144,7 @@ public class NewsComp extends ComponentDefinition {
 
                 @Override
                 public void handle(Pong content, KContentMsg<?, KHeader<?>, Pong> container) {
-                    LOG.debug("{}received pong from:{}", logPrefix, container.getHeader().getSource().getId());
+                    // not used
                 }
             };
 

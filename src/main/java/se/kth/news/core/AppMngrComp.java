@@ -65,7 +65,7 @@ public class AppMngrComp extends ComponentDefinition {
     public AppMngrComp(Init init) {
         selfAdr = init.selfAdr;
         logPrefix = "<nid:" + selfAdr.getId() + ">";
-        LOG.info("{}initiating...", logPrefix);
+        LOG.debug("{}initiating...", logPrefix);
 
         extPorts = init.extPorts;
         gradientOId = init.gradientOId;
@@ -77,7 +77,7 @@ public class AppMngrComp extends ComponentDefinition {
     Handler handleStart = new Handler<Start>() {
         @Override
         public void handle(Start event) {
-            LOG.info("{}starting...", logPrefix);
+            LOG.debug("{}starting...", logPrefix);
 
             pendingGradientConnReq = new OMngrTGradient.ConnectRequest(gradientOId,
                     new NewsViewComparator(), new NewsViewGradientFilter());
@@ -88,7 +88,7 @@ public class AppMngrComp extends ComponentDefinition {
     Handler handleGradientConnected = new Handler<OMngrTGradient.ConnectResponse>() {
         @Override
         public void handle(OMngrTGradient.ConnectResponse event) {
-            LOG.info("{}overlays connected", logPrefix);
+            LOG.debug("{}overlays connected", logPrefix);
             connectLeaderSelect();
             connectNews();
             trigger(Start.event, leaderSelectComp.control());

@@ -64,7 +64,7 @@ public class HostMngrComp extends ComponentDefinition {
     public HostMngrComp(Init init) {
         selfAdr = init.selfAdr;
         logPrefix = "<nid:" + selfAdr.getId() + ">";
-        LOG.info("{}initiating...", logPrefix);
+        LOG.debug("{}initiating...", logPrefix);
 
         bootstrapServer = init.bootstrapServer;
         overlayId = init.overlayId;
@@ -75,7 +75,7 @@ public class HostMngrComp extends ComponentDefinition {
     Handler handleStart = new Handler<Start>() {
         @Override
         public void handle(Start event) {
-            LOG.info("{}starting...", logPrefix);
+            LOG.debug("{}starting...", logPrefix);
             connectBootstrapClient();
             connectOverlayMngr();
             connectApp();

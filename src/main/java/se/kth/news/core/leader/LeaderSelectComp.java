@@ -17,23 +17,22 @@
  */
 package se.kth.news.core.leader;
 
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.kth.news.core.news.util.NewsView;
-import se.kth.news.core.news.util.NewsViewComparator;
-import se.sics.kompics.ComponentDefinition;
-import se.sics.kompics.Handler;
-import se.sics.kompics.Negative;
-import se.sics.kompics.Positive;
-import se.sics.kompics.Start;
+import se.sics.kompics.*;
 import se.sics.kompics.network.Network;
+import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.gradient.GradientPort;
 import se.sics.ktoolbox.gradient.event.TGradientSample;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.KContentMsg;
+import se.sics.ktoolbox.util.network.KHeader;
+import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
+import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.ktoolbox.util.other.Container;
 
 /**
@@ -48,32 +47,33 @@ public class LeaderSelectComp extends ComponentDefinition {
     Positive<Timer> timerPort = requires(Timer.class);
     Positive<Network> networkPort = requires(Network.class);
     Positive<GradientPort> gradientPort = requires(GradientPort.class);
-    Negative<LeaderSelectPort> leaderUpdate = provides(LeaderSelectPort.class);
+    Negative<LeaderSelectPort> leaderUpdatePort = provides(LeaderSelectPort.class);
     //*******************************EXTERNAL_STATE*****************************
     private KAddress selfAdr;
     //*******************************INTERNAL_STATE*****************************
     private Comparator viewComparator;
-
-    private List<Container<KAddress, NewsView>> neighbors;
-    private List<Container<KAddress, NewsView>> fingers;
-    private int sequenceNumber = 0;
     private NewsView selfView;
+    private List<Container<KAddress, NewsView>> fingers;
+    private List<Container<KAddress, NewsView>> neighbors;
+    private int sequenceNumber = 0;
+    private KAddress leaderAdr;
 
     public LeaderSelectComp(Init init) {
         selfAdr = init.selfAdr;
         logPrefix = "<nid:" + selfAdr.getId() + ">";
-        LOG.info("{}initiating...", logPrefix);
+        LOG.debug("{}initiating...", logPrefix);
         
-        viewComparator = new NewsViewComparator();
+        viewComparator = init.viewComparator;
 
         subscribe(handleStart, control);
         subscribe(handleGradientSample, gradientPort);
+        subscribe(handleLeaderUpdate, networkPort);
     }
 
     Handler handleStart = new Handler<Start>() {
         @Override
         public void handle(Start event) {
-            LOG.info("{}starting...", logPrefix);
+            LOG.debug("{}starting...", logPrefix);
         }
     };
     
@@ -84,27 +84,51 @@ public class LeaderSelectComp extends ComponentDefinition {
             LOG.debug("{}fingers:{}", logPrefix, sample.gradientFingers);
             LOG.debug("{}local view:{}", logPrefix, sample.selfView);
 
-            sequenceNumber += 1;
-            neighbors = sample.getGradientNeighbours();
-            fingers = sample.getGradientFingers();
             selfView = (NewsView) sample.selfView;
+            fingers = sample.getGradientFingers();
+            neighbors = sample.getGradientNeighbours();
 
-            if (sequenceNumber == 200) {
-                if (iAmTheLeader()) {
-                    LOG.info("{}I am the leader", logPrefix);
-                    trigger(new LeaderUpdate(selfAdr), leaderUpdate);
+            if (sequenceNumber++ > 500) {
+                if ((leaderAdr == null || !leaderAdr.equals(selfAdr)) && iAmTheLeader()) {
+                    setLeader(selfAdr);
                 }
             }
         }
     };
 
     private boolean iAmTheLeader() {
-        for (Container<KAddress, NewsView> finger : fingers) {
-            if (viewComparator.compare(selfView, finger.getContent()) < 0) {
+        for (Container<KAddress, NewsView> f : fingers) {
+            if (viewComparator.compare(selfView, f.getContent()) < 0) {
                 return false;
             }
         }
         return true;
+    }
+
+    ClassMatchedHandler handleLeaderUpdate
+            = new ClassMatchedHandler<LeaderUpdate, KContentMsg<?, ?, LeaderUpdate>>() {
+        @Override
+        public void handle(LeaderUpdate content, KContentMsg<?, ?, LeaderUpdate> container) {
+            if (leaderAdr == null || !leaderAdr.equals(container.getContent().leaderAdr)) {
+                setLeader(container.getContent().leaderAdr);
+            }
+        }
+    };
+
+    private void setLeader(KAddress newLeaderAdr) {
+        leaderAdr = newLeaderAdr;
+        LeaderUpdate leaderUpdate = new LeaderUpdate(leaderAdr);
+        trigger(leaderUpdate, leaderUpdatePort);
+        broadcast(leaderUpdate, fingers);
+        broadcast(leaderUpdate, neighbors);
+    }
+
+    private void broadcast(Object content, List<Container<KAddress, NewsView>> receivers) {
+        for (Container<KAddress, NewsView> r : receivers) {
+            KHeader header = new BasicHeader(selfAdr, r.getSource(), Transport.UDP);
+            KContentMsg msg = new BasicContentMsg(header, content);
+            trigger(msg, networkPort);
+        }
     }
 
     public static class Init extends se.sics.kompics.Init<LeaderSelectComp> {
