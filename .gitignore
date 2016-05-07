@@ -59,3 +59,4 @@ crashlytics-build.properties
 
 ### Other
 *.log
+*.log.1
