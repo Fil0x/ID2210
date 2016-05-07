@@ -116,10 +116,10 @@ public class NewsComp extends ComponentDefinition {
                 seenNews.add(selfAdr.getId() + ":" + sequenceNumber);
                 updateLocalNewsView();
             }
-            /*else if (Math.random() < 0.5) {
+            else if (Math.random() < 0.5) {
                 seenNews.add(selfAdr.getId() + ":" + sequenceNumber);
                 updateLocalNewsView();
-            }*/
+            }
         }
     };
 

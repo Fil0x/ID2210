@@ -47,7 +47,7 @@ public class LeaderSelectComp extends ComponentDefinition {
     Positive<Timer> timerPort = requires(Timer.class);
     Positive<Network> networkPort = requires(Network.class);
     Positive<GradientPort> gradientPort = requires(GradientPort.class);
-    Negative<LeaderSelectPort> leaderUpdatePort = provides(LeaderSelectPort.class);
+    Negative<LeaderSelectPort> leaderPort = provides(LeaderSelectPort.class);
     //*******************************EXTERNAL_STATE*****************************
     private KAddress selfAdr;
     //*******************************INTERNAL_STATE*****************************
@@ -67,7 +67,8 @@ public class LeaderSelectComp extends ComponentDefinition {
 
         subscribe(handleStart, control);
         subscribe(handleGradientSample, gradientPort);
-        subscribe(handleLeaderUpdate, networkPort);
+        subscribe(handleLeaderPull, networkPort);
+        subscribe(handleLeaderPush, networkPort);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -88,48 +89,66 @@ public class LeaderSelectComp extends ComponentDefinition {
             fingers = sample.getGradientFingers();
             neighbors = sample.getGradientNeighbours();
 
-            if (sequenceNumber++ > 500) {
-                if ((leaderAdr == null || !leaderAdr.equals(selfAdr)) && iAmTheLeader()) {
+            if (sequenceNumber++ > 200) {
+                if (iAmTheLeader()) {
                     setLeader(selfAdr);
+                } else {
+                    leaderPull();
                 }
             }
         }
     };
 
     private boolean iAmTheLeader() {
-        for (Container<KAddress, NewsView> f : fingers) {
-            if (viewComparator.compare(selfView, f.getContent()) < 0) {
-                return false;
-            }
+        if (viewComparator.compare(selfView, getHighestFinger().getContent()) < 0) {
+            return false;
+        } else {
+            return true;
         }
-        return true;
     }
 
-    ClassMatchedHandler handleLeaderUpdate
-            = new ClassMatchedHandler<LeaderUpdate, KContentMsg<?, ?, LeaderUpdate>>() {
+    private void setLeader(KAddress leaderAdr_) {
+        if (leaderAdr == null || !leaderAdr.equals(leaderAdr_)) {
+            trigger(new LeaderUpdate(leaderAdr = leaderAdr_), leaderPort);
+        }
+    }
+
+    private void leaderPull() {
+        Container<KAddress, NewsView> highestFinger = getHighestFinger();
+        KHeader header = new BasicHeader(selfAdr, highestFinger.getSource(), Transport.UDP);
+        KContentMsg msg = new BasicContentMsg(header, new LeaderPull());
+        trigger(msg, networkPort);
+    }
+
+    private Container<KAddress, NewsView> getHighestFinger() {
+        Container<KAddress, NewsView> highestFinger = fingers.get(0);
+        for (int i = 1; i < fingers.size(); i++) {
+            if (viewComparator.compare(highestFinger.getContent(), fingers.get(i).getContent()) < 0) {
+                highestFinger = fingers.get(i);
+            }
+        }
+        return highestFinger;
+    }
+
+    ClassMatchedHandler handleLeaderPull
+            = new ClassMatchedHandler<LeaderPull, KContentMsg<?, ?, LeaderPull>>() {
         @Override
-        public void handle(LeaderUpdate content, KContentMsg<?, ?, LeaderUpdate> container) {
-            if (leaderAdr == null || !leaderAdr.equals(container.getContent().leaderAdr)) {
-                setLeader(container.getContent().leaderAdr);
+        public void handle(LeaderPull content, KContentMsg<?, ?, LeaderPull> container) {
+            if (leaderAdr != null) {
+                KHeader header = new BasicHeader(selfAdr, container.getHeader().getSource(), Transport.UDP);
+                KContentMsg msg = new BasicContentMsg(header, new LeaderPush(leaderAdr));
+                trigger(msg, networkPort);
             }
         }
     };
 
-    private void setLeader(KAddress newLeaderAdr) {
-        leaderAdr = newLeaderAdr;
-        LeaderUpdate leaderUpdate = new LeaderUpdate(leaderAdr);
-        trigger(leaderUpdate, leaderUpdatePort);
-        broadcast(leaderUpdate, fingers);
-        broadcast(leaderUpdate, neighbors);
-    }
-
-    private void broadcast(Object content, List<Container<KAddress, NewsView>> receivers) {
-        for (Container<KAddress, NewsView> r : receivers) {
-            KHeader header = new BasicHeader(selfAdr, r.getSource(), Transport.UDP);
-            KContentMsg msg = new BasicContentMsg(header, content);
-            trigger(msg, networkPort);
+    ClassMatchedHandler handleLeaderPush
+            = new ClassMatchedHandler<LeaderPush, KContentMsg<?, ?, LeaderPush>>() {
+        @Override
+        public void handle(LeaderPush content, KContentMsg<?, ?, LeaderPush> container) {
+            setLeader(container.getContent().leaderAdr);
         }
-    }
+    };
 
     public static class Init extends se.sics.kompics.Init<LeaderSelectComp> {
 
