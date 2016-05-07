@@ -74,6 +74,10 @@ public class NewsComp extends ComponentDefinition {
     private Map<Integer, Set<String>> newsCoverage = new HashMap<>();  // news item -> {nodes}
     private Map<String, Set<Integer>> nodeKnowledge = new HashMap<>(); // node -> {news items}
 
+    private Set<String> seenNews = new HashSet<>();
+    private List<Container<KAddress, NewsView>> neighbors;
+    private List<Container<KAddress, NewsView>> fingers;
+
     public NewsComp(Init init) {
         selfAdr = init.selfAdr;
         logPrefix = "<nid:" + selfAdr.getId() + ">";
@@ -98,7 +102,7 @@ public class NewsComp extends ComponentDefinition {
     };
 
     private void updateLocalNewsView() {
-        localNewsView = new NewsView(selfAdr.getId(), 0);
+        localNewsView = new NewsView(selfAdr.getId(), seenNews.size());
         LOG.debug("{}informing overlays of new view", logPrefix);
         trigger(new OverlayViewUpdate.Indication<>(gradientOId, false, localNewsView.copy()), viewUpdatePort);
     }
@@ -106,7 +110,7 @@ public class NewsComp extends ComponentDefinition {
     Handler handleCroupierSample = new Handler<CroupierSample<NewsView>>() {
         @Override
         public void handle(CroupierSample<NewsView> castSample) {
-            croupierSample = castSample;
+            /*croupierSample = castSample;
             sequenceNumber += 1;
             if (!selfAdr.getId().toString().equals("1") || croupierSample.publicSample.isEmpty() || sequenceNumber < 100) {
                 return;
@@ -145,22 +149,45 @@ public class NewsComp extends ComponentDefinition {
                 KHeader header = new BasicHeader(selfAdr, partner, Transport.UDP);
                 KContentMsg msg = new BasicContentMsg(header, new Ping(selfAdr, sequenceNumber, TTL));
                 trigger(msg, networkPort);
-            }
+            }*/
         }
     };
 
     Handler handleGradientSample = new Handler<TGradientSample>() {
         @Override
         public void handle(TGradientSample sample) {
-            List<GradientContainer> neighbors = sample.getGradientNeighbours();
+            sequenceNumber += 1;
+            neighbors = sample.getGradientNeighbours();
+            fingers = sample.getGradientFingers();
 
+            if (selfAdr.getId().toString().equals("11") || selfAdr.getId().toString().equals("22") || selfAdr.getId().toString().equals("33") || selfAdr.getId().toString().equals("44") || selfAdr.getId().toString().equals("55") || selfAdr.getId().toString().equals("66") || selfAdr.getId().toString().equals("77") || selfAdr.getId().toString().equals("88") || selfAdr.getId().toString().equals("99")) {
+                seenNews.add(Integer.toString(sequenceNumber));
+                updateLocalNewsView();
+            }
 
+            if (sequenceNumber == 256) {
+                if (iAmTheLeader()) {
+                    LOG.info("{}I am the leader", logPrefix);
+                    trigger(new LeaderUpdate(selfAdr), gradientPort);
+                }
+            }
         }
     };
+
+    private boolean iAmTheLeader() {
+        for (Container<KAddress, NewsView> gc : fingers) {
+            NewsView nW = gc.getContent();
+            if (!(seenNews.size() > nW.localNewsCount && selfAdr.getId().compareTo(gc.getSource().getId()) < 0)) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     Handler handleLeader = new Handler<LeaderUpdate>() {
         @Override
         public void handle(LeaderUpdate event) {
+            LOG.info("{}New leader:{}", logPrefix, event.leaderAdr.getId());
         }
     };
 
@@ -169,7 +196,7 @@ public class NewsComp extends ComponentDefinition {
 
                 @Override
                 public void handle(Ping content, KContentMsg<?, ?, Ping> container) {
-                    LOG.debug("{}received ping from:{}", logPrefix, container.getHeader().getSource().getId());
+                    /*LOG.debug("{}received ping from:{}", logPrefix, container.getHeader().getSource().getId());
                     // Forward Ping
                     content.decTTL();
                     if (content.getTTL() > 0) {
@@ -190,6 +217,7 @@ public class NewsComp extends ComponentDefinition {
                     KHeader pongHeader = new BasicHeader(selfAdr, content.getOrigin(), Transport.UDP);
                     KContentMsg pongMsg = new BasicContentMsg(pongHeader, new Pong(content.getSeqNum()));
                     trigger(pongMsg, networkPort);
+                    */
                 }
             };
 
@@ -198,13 +226,14 @@ public class NewsComp extends ComponentDefinition {
 
                 @Override
                 public void handle(Pong content, KContentMsg<?, KHeader<?>, Pong> container) {
-                    LOG.debug("{}received pong from:{}", logPrefix, container.getHeader().getSource().getId());
+                    /*LOG.debug("{}received pong from:{}", logPrefix, container.getHeader().getSource().getId());
                     String sourceId = getId(container.getHeader().getSource());
                     newsCoverage.get(content.getSeqNum()).add(sourceId);
                     if (nodeKnowledge.get(sourceId) == null) {
                         nodeKnowledge.put(sourceId, new HashSet<Integer>());
                     }
                     nodeKnowledge.get(sourceId).add(content.getSeqNum());
+                    */
                 }
             };
 
