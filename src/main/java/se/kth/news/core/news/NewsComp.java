@@ -69,10 +69,7 @@ public class NewsComp extends ComponentDefinition {
     private Identifier gradientOId;
     //*******************************INTERNAL_STATE*****************************
     private NewsView localNewsView;
-    private CroupierSample<NewsView> croupierSample;
     private int sequenceNumber = 0;
-    private Map<Integer, Set<String>> newsCoverage = new HashMap<>();  // news item -> {nodes}
-    private Map<String, Set<Integer>> nodeKnowledge = new HashMap<>(); // node -> {news items}
 
     private Set<String> seenNews = new HashSet<>();
     private List<Container<KAddress, NewsView>> neighbors;
@@ -110,46 +107,7 @@ public class NewsComp extends ComponentDefinition {
     Handler handleCroupierSample = new Handler<CroupierSample<NewsView>>() {
         @Override
         public void handle(CroupierSample<NewsView> castSample) {
-            /*croupierSample = castSample;
-            sequenceNumber += 1;
-            if (!selfAdr.getId().toString().equals("1") || croupierSample.publicSample.isEmpty() || sequenceNumber < 100) {
-                return;
-            }
-
-            // Print results
-            int numberOfNews = newsCoverage.keySet().size();
-            if (numberOfNews > 0) {
-
-                double coverageSum = 0;
-                for (int newsItem : newsCoverage.keySet()) {
-                    int nodes = newsCoverage.get(newsItem).size();
-                    double nodesPercent = 100 * nodes / NUMBER_OF_NODES;
-                    coverageSum += nodesPercent;
-                }
-
-                double knowledgeSum = 0;
-                List<Integer> knowledgeList = new LinkedList<>();
-                for (String node : nodeKnowledge.keySet()) {
-                    int news = nodeKnowledge.get(node).size();
-                    double newsPercent = 100 * news / numberOfNews;
-                    knowledgeSum += newsPercent;
-                    knowledgeList.add((int) newsPercent);
-                }
-
-//                System.out.println("\n(TTL) " + TTL + "\nnumber of news \t" + numberOfNews);
-//                System.out.println("news coverage\t" + (int) coverageSum / numberOfNews);
-//                System.out.println("node knowledge\t" + (int) knowledgeSum / NUMBER_OF_NODES);
-//                System.out.println("for each node\t" + knowledgeList);
-            }
-
-            // Disseminate "news"
-            newsCoverage.put(sequenceNumber, new HashSet<String>());
-            for (Identifier key : croupierSample.publicSample.keySet()) {
-                KAddress partner = croupierSample.publicSample.get(key).getSource();
-                KHeader header = new BasicHeader(selfAdr, partner, Transport.UDP);
-                KContentMsg msg = new BasicContentMsg(header, new Ping(selfAdr, sequenceNumber, TTL));
-                trigger(msg, networkPort);
-            }*/
+            // ignore croupier
         }
     };
 
@@ -164,25 +122,8 @@ public class NewsComp extends ComponentDefinition {
                 seenNews.add(Integer.toString(sequenceNumber));
                 updateLocalNewsView();
             }
-
-            if (sequenceNumber == 256) {
-                if (iAmTheLeader()) {
-                    LOG.info("{}I am the leader", logPrefix);
-                    trigger(new LeaderUpdate(selfAdr), gradientPort);
-                }
-            }
         }
     };
-
-    private boolean iAmTheLeader() {
-        for (Container<KAddress, NewsView> gc : fingers) {
-            NewsView nW = gc.getContent();
-            if (!(seenNews.size() > nW.localNewsCount && selfAdr.getId().compareTo(gc.getSource().getId()) < 0)) {
-                return false;
-            }
-        }
-        return true;
-    }
 
     Handler handleLeader = new Handler<LeaderUpdate>() {
         @Override
@@ -196,28 +137,7 @@ public class NewsComp extends ComponentDefinition {
 
                 @Override
                 public void handle(Ping content, KContentMsg<?, ?, Ping> container) {
-                    /*LOG.debug("{}received ping from:{}", logPrefix, container.getHeader().getSource().getId());
-                    // Forward Ping
-                    content.decTTL();
-                    if (content.getTTL() > 0) {
-                        for (Identifier key : croupierSample.publicSample.keySet()) {
-                            KAddress partner = croupierSample.publicSample.get(key).getSource();
-                            // don't send back nor to the originator
-                            String partnerId = getId(partner);
-                            String sourceId  = getId(container.getHeader().getSource());
-                            String originId  = getId(content.getOrigin());
-                            if (!partnerId.equals(sourceId) && !partnerId.equals(originId)) {
-                                KHeader pingHeader = new BasicHeader(selfAdr, partner, Transport.UDP);
-                                KContentMsg pingMsg = new BasicContentMsg(pingHeader, content);
-                                trigger(pingMsg, networkPort);
-                            }
-                        }
-                    }
-                    // Send Pong
-                    KHeader pongHeader = new BasicHeader(selfAdr, content.getOrigin(), Transport.UDP);
-                    KContentMsg pongMsg = new BasicContentMsg(pongHeader, new Pong(content.getSeqNum()));
-                    trigger(pongMsg, networkPort);
-                    */
+                    LOG.debug("{}received ping from:{}", logPrefix, container.getHeader().getSource().getId());
                 }
             };
 
@@ -226,20 +146,9 @@ public class NewsComp extends ComponentDefinition {
 
                 @Override
                 public void handle(Pong content, KContentMsg<?, KHeader<?>, Pong> container) {
-                    /*LOG.debug("{}received pong from:{}", logPrefix, container.getHeader().getSource().getId());
-                    String sourceId = getId(container.getHeader().getSource());
-                    newsCoverage.get(content.getSeqNum()).add(sourceId);
-                    if (nodeKnowledge.get(sourceId) == null) {
-                        nodeKnowledge.put(sourceId, new HashSet<Integer>());
-                    }
-                    nodeKnowledge.get(sourceId).add(content.getSeqNum());
-                    */
+                    LOG.debug("{}received pong from:{}", logPrefix, container.getHeader().getSource().getId());
                 }
             };
-
-    private String getId(KAddress kAddress) {
-        return kAddress.getId().toString();
-    }
 
     public static class Init extends se.sics.kompics.Init<NewsComp> {
 

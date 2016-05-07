@@ -18,8 +18,12 @@
 package se.kth.news.core.leader;
 
 import java.util.Comparator;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.news.core.news.util.NewsView;
+import se.kth.news.core.news.util.NewsViewComparator;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -30,6 +34,7 @@ import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.gradient.GradientPort;
 import se.sics.ktoolbox.gradient.event.TGradientSample;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.other.Container;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -49,12 +54,17 @@ public class LeaderSelectComp extends ComponentDefinition {
     //*******************************INTERNAL_STATE*****************************
     private Comparator viewComparator;
 
+    private List<Container<KAddress, NewsView>> neighbors;
+    private List<Container<KAddress, NewsView>> fingers;
+    private int sequenceNumber = 0;
+    private NewsView selfView;
+
     public LeaderSelectComp(Init init) {
         selfAdr = init.selfAdr;
         logPrefix = "<nid:" + selfAdr.getId() + ">";
         LOG.info("{}initiating...", logPrefix);
         
-        viewComparator = viewComparator;
+        viewComparator = new NewsViewComparator();
 
         subscribe(handleStart, control);
         subscribe(handleGradientSample, gradientPort);
@@ -73,8 +83,29 @@ public class LeaderSelectComp extends ComponentDefinition {
             LOG.debug("{}neighbours:{}", logPrefix, sample.gradientNeighbours);
             LOG.debug("{}fingers:{}", logPrefix, sample.gradientFingers);
             LOG.debug("{}local view:{}", logPrefix, sample.selfView);
+
+            sequenceNumber += 1;
+            neighbors = sample.getGradientNeighbours();
+            fingers = sample.getGradientFingers();
+            selfView = (NewsView) sample.selfView;
+
+            if (sequenceNumber == 100) {
+                if (iAmTheLeader()) {
+                    LOG.info("{}I am the leader", logPrefix);
+                    trigger(new LeaderUpdate(selfAdr), leaderUpdate);
+                }
+            }
         }
     };
+
+    private boolean iAmTheLeader() {
+        for (Container<KAddress, NewsView> finger : fingers) {
+            if (viewComparator.compare(selfView, finger.getContent()) < 0) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     public static class Init extends se.sics.kompics.Init<LeaderSelectComp> {
 
