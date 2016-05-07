@@ -89,7 +89,7 @@ public class LeaderSelectComp extends ComponentDefinition {
             fingers = sample.getGradientFingers();
             selfView = (NewsView) sample.selfView;
 
-            if (sequenceNumber == 100) {
+            if (sequenceNumber == 200) {
                 if (iAmTheLeader()) {
                     LOG.info("{}I am the leader", logPrefix);
                     trigger(new LeaderUpdate(selfAdr), leaderUpdate);
