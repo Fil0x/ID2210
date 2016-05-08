@@ -55,7 +55,7 @@ public class NewsComp extends ComponentDefinition {
     //*******************************NODE_SETUP*********************************
     public static final int NUMBER_OF_NODES = 100;
     public static final int TTL = -1;
-    public static final boolean CHEATING = true;
+    public static final boolean CHEATING = false;
     //*******************************LOGGING************************************
     private static final Logger LOG = LoggerFactory.getLogger(NewsComp.class);
     private String logPrefix = " ";
@@ -131,7 +131,7 @@ public class NewsComp extends ComponentDefinition {
             if (leaderAdr != null) {
                 newsPull();
 
-                if (selfAdr.getId().toString().equals("1")) {
+                if (selfAdr.getId().toString().equals("1") ) {
                     // Print results
                     int numberOfNews = newsCoverage.keySet().size();
                     if (numberOfNews > 0) {
@@ -158,10 +158,12 @@ public class NewsComp extends ComponentDefinition {
                         System.out.println("for each node\t" + knowledgeList);
                     }
 
-                    newsCoverage.put(sequenceNumber, new HashSet<String>());
-                    KHeader header = new BasicHeader(selfAdr, leaderAdr, Transport.UDP);
-                    KContentMsg msg = new BasicContentMsg(header, new Ping(selfAdr, sequenceNumber, TTL));
-                    trigger(msg, networkPort);
+                    if (sequenceNumber < 303) {
+                        newsCoverage.put(sequenceNumber, new HashSet<String>());
+                        KHeader header = new BasicHeader(selfAdr, leaderAdr, Transport.UDP);
+                        KContentMsg msg = new BasicContentMsg(header, new Ping(selfAdr, sequenceNumber, TTL));
+                        trigger(msg, networkPort);
+                    }
                 }
             }
         }
@@ -216,7 +218,7 @@ public class NewsComp extends ComponentDefinition {
     Handler handleLeader = new Handler<LeaderUpdate>() {
         @Override
         public void handle(LeaderUpdate event) {
-            LOG.info("{} new leader: {}", logPrefix, (leaderAdr = event.leaderAdr).getId());
+            LOG.debug("{} new leader: {}", logPrefix, (leaderAdr = event.leaderAdr).getId());
         }
     };
 
