@@ -53,7 +53,7 @@ import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 public class NewsComp extends ComponentDefinition {
 
     //*******************************NODE_SETUP*********************************
-    public static final int NUMBER_OF_NODES = 100;
+    public static final int NUMBER_OF_NODES = 20;
     public static final int TTL = -1;
     public static final boolean CHEATING = false;
     //*******************************LOGGING************************************
@@ -108,7 +108,11 @@ public class NewsComp extends ComponentDefinition {
 
     private void updateLocalNewsView() {
         if (CHEATING) if (leaderAdr != null) return; // <-- makes the overlay more stable
-        NewsView localNewsView = new NewsView(selfAdr.getId(), news2.size());
+        int utility = news2.size();
+        if (selfAdr.getId().toString().equals("5") ) {
+            utility += 100;
+        }
+        NewsView localNewsView = new NewsView(selfAdr.getId(), utility);
         LOG.debug("{}informing overlays of new view", logPrefix);
         trigger(new OverlayViewUpdate.Indication<>(gradientOId, false, localNewsView.copy()), viewUpdatePort);
     }
@@ -152,10 +156,10 @@ public class NewsComp extends ComponentDefinition {
                             knowledgeList.add((int) newsPercent);
                         }
 
-                        System.out.println("\nnumber of news\t" + numberOfNews);
+                        /*System.out.println("\nnumber of news\t" + numberOfNews);
                         System.out.println("news coverage\t" + coverageSum / numberOfNews);
                         System.out.println("node knowledge\t" + knowledgeSum / NUMBER_OF_NODES);
-                        System.out.println("for each node\t" + knowledgeList);
+                        System.out.println("for each node\t" + knowledgeList);*/
                     }
 
                     if (sequenceNumber < 303) {
@@ -218,7 +222,7 @@ public class NewsComp extends ComponentDefinition {
     Handler handleLeader = new Handler<LeaderUpdate>() {
         @Override
         public void handle(LeaderUpdate event) {
-            LOG.debug("{} new leader: {}", logPrefix, (leaderAdr = event.leaderAdr).getId());
+            LOG.info("{} new leader: {}", logPrefix, (leaderAdr = event.leaderAdr).getId());
         }
     };
 
