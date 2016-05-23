@@ -53,7 +53,7 @@ import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 public class NewsComp extends ComponentDefinition {
 
     //*******************************NODE_SETUP*********************************
-    public static final int NUMBER_OF_NODES = 20;
+    public static final int NUMBER_OF_NODES = 100;
     public static final int TTL = -1;
     public static final boolean CHEATING = false;
     //*******************************LOGGING************************************
@@ -222,7 +222,7 @@ public class NewsComp extends ComponentDefinition {
     Handler handleLeader = new Handler<LeaderUpdate>() {
         @Override
         public void handle(LeaderUpdate event) {
-            LOG.info("{} new leader: {}", logPrefix, (leaderAdr = event.leaderAdr).getId());
+            LOG.debug("{} new leader: {}", logPrefix, (leaderAdr = event.leaderAdr).getId());
         }
     };
 

@@ -17,6 +17,8 @@
  */
 package se.kth.news.core;
 
+import se.kth.news.core.epfd.MonitorComp;
+import se.kth.news.core.epfd.MonitorPort;
 import se.kth.news.core.leader.LeaderSelectComp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,13 +26,7 @@ import se.kth.news.core.leader.LeaderSelectPort;
 import se.kth.news.core.news.NewsComp;
 import se.kth.news.core.news.util.NewsViewComparator;
 import se.kth.news.core.news.util.NewsViewGradientFilter;
-import se.sics.kompics.Channel;
-import se.sics.kompics.Component;
-import se.sics.kompics.ComponentDefinition;
-import se.sics.kompics.Handler;
-import se.sics.kompics.Negative;
-import se.sics.kompics.Positive;
-import se.sics.kompics.Start;
+import se.sics.kompics.*;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.croupier.CroupierPort;
@@ -57,6 +53,7 @@ public class AppMngrComp extends ComponentDefinition {
     private Identifier gradientOId;
     //***************************INTERNAL_STATE*********************************
     private Component leaderSelectComp;
+    private Component monitorComp;
     private Component newsComp;
     //******************************AUX_STATE***********************************
     private OMngrTGradient.ConnectRequest pendingGradientConnReq;
@@ -89,6 +86,7 @@ public class AppMngrComp extends ComponentDefinition {
         @Override
         public void handle(OMngrTGradient.ConnectResponse event) {
             LOG.debug("{}overlays connected", logPrefix);
+            connectMonitor();
             connectLeaderSelect();
             connectNews();
             trigger(Start.event, leaderSelectComp.control());
@@ -96,11 +94,18 @@ public class AppMngrComp extends ComponentDefinition {
         }
     };
 
+    private void connectMonitor() {
+        monitorComp = create(MonitorComp.class, se.sics.kompics.Init.NONE);
+        connect(monitorComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
+        connect(monitorComp.getNegative(Network.class), extPorts.networkPort, Channel.TWO_WAY);
+    }
+
     private void connectLeaderSelect() {
         leaderSelectComp = create(LeaderSelectComp.class, new LeaderSelectComp.Init(selfAdr, new NewsViewComparator()));
         connect(leaderSelectComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
         connect(leaderSelectComp.getNegative(Network.class), extPorts.networkPort, Channel.TWO_WAY);
         connect(leaderSelectComp.getNegative(GradientPort.class), extPorts.gradientPort, Channel.TWO_WAY);
+        connect(leaderSelectComp.getNegative(MonitorPort.class), monitorComp.getPositive(MonitorPort.class), Channel.TWO_WAY);
     }
 
     private void connectNews() {

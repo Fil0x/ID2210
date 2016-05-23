@@ -27,6 +27,7 @@ import se.sics.kompics.simulator.SimulationScenario;
 import se.sics.kompics.simulator.adaptor.Operation;
 import se.sics.kompics.simulator.adaptor.Operation1;
 import se.sics.kompics.simulator.adaptor.distributions.extra.BasicIntSequentialDistribution;
+import se.sics.kompics.simulator.events.system.KillNodeEvent;
 import se.sics.kompics.simulator.events.system.SetupEvent;
 import se.sics.kompics.simulator.events.system.StartNodeEvent;
 import se.sics.kompics.simulator.network.identifier.IdentifierExtractor;
@@ -123,6 +124,29 @@ public class ScenarioGen {
         }
     };
 
+    static Operation1<KillNodeEvent, Integer> killNodeOp = new Operation1<KillNodeEvent, Integer>() {
+        @Override
+        public KillNodeEvent generate(final Integer nodeId) {
+            return new KillNodeEvent() {
+                KAddress selfAdr;
+
+                {
+                    selfAdr = ScenarioSetup.getNodeAdr(nodeId);
+                }
+
+                @Override
+                public Address getNodeAddress() {
+                    return selfAdr;
+                }
+
+                @Override
+                public String toString() {
+                    return "KillNode<" + selfAdr.toString() + ">";
+                }
+            };
+        }
+    };
+
     public static SimulationScenario simpleBoot() {
         SimulationScenario scen = new SimulationScenario() {
             {
@@ -144,10 +168,17 @@ public class ScenarioGen {
                         raise(NewsComp.NUMBER_OF_NODES, startNodeOp, new BasicIntSequentialDistribution(1));
                     }
                 };
+                StochasticProcess killPeer = new StochasticProcess() {
+                    {
+                        eventInterArrivalTime(uniform(1000, 1100));
+                        raise(1, killNodeOp, new BasicIntSequentialDistribution(5));
+                    }
+                };
 
                 systemSetup.start();
                 startBootstrapServer.startAfterTerminationOf(1000, systemSetup);
                 startPeers.startAfterTerminationOf(1000, startBootstrapServer);
+                killPeer.startAfterTerminationOf(500*1000, startPeers);
                 terminateAfterTerminationOf(1000*1000, startPeers);
             }
         };

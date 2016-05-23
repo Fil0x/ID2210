@@ -21,6 +21,10 @@ import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.news.core.epfd.MonitorRequest;
+import se.kth.news.core.epfd.MonitorPort;
+import se.kth.news.core.epfd.Restore;
+import se.kth.news.core.epfd.Suspect;
 import se.kth.news.core.news.util.NewsView;
 import se.sics.kompics.*;
 import se.sics.kompics.network.Network;
@@ -47,6 +51,7 @@ public class LeaderSelectComp extends ComponentDefinition {
     Positive<Timer> timerPort = requires(Timer.class);
     Positive<Network> networkPort = requires(Network.class);
     Positive<GradientPort> gradientPort = requires(GradientPort.class);
+    Positive<MonitorPort> monitorPort = requires(MonitorPort.class);
     Negative<LeaderSelectPort> leaderPort = provides(LeaderSelectPort.class);
     //*******************************EXTERNAL_STATE*****************************
     private KAddress selfAdr;
@@ -69,6 +74,8 @@ public class LeaderSelectComp extends ComponentDefinition {
         subscribe(handleGradientSample, gradientPort);
         subscribe(handleLeaderPull, networkPort);
         subscribe(handleLeaderPush, networkPort);
+        subscribe(handleRestore, monitorPort);
+        subscribe(handleSuspect, monitorPort);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -111,7 +118,39 @@ public class LeaderSelectComp extends ComponentDefinition {
     private void setLeader(KAddress leaderAdr_) {
         if (leaderAdr == null || !leaderAdr.equals(leaderAdr_)) {
             trigger(new LeaderUpdate(leaderAdr = leaderAdr_), leaderPort);
+            if (hasLeaderNeighbor()) {
+                Set<KAddress> nodesToMonitor = getAddressSet(neighbors);
+                trigger(new MonitorRequest(nodesToMonitor), monitorPort);
+                LOG.info("{}requested monitoring:{}", logPrefix, nodesToMonitor);
+                //if (!hasLeaderFinger()) System.out.println("WTF");
+            }
         }
+    }
+
+    private Set<KAddress> getAddressSet(List<Container<KAddress, NewsView>> containerList) {
+        HashSet<KAddress> addressSet = new HashSet<>();
+        for (Container<KAddress, NewsView> c : containerList) {
+            addressSet.add(c.getSource());
+        }
+        return addressSet;
+    }
+
+    private boolean hasLeaderNeighbor() {
+        for (int i = 0; i < neighbors.size(); i++) {
+            if (neighbors.get(i).getSource().equals(leaderAdr)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasLeaderFinger() {
+        for (int i = 0; i < fingers.size(); i++) {
+            if (fingers.get(i).getSource().equals(leaderAdr)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void leaderPull() {
@@ -148,6 +187,20 @@ public class LeaderSelectComp extends ComponentDefinition {
         @Override
         public void handle(LeaderPush content, KContentMsg<?, ?, LeaderPush> container) {
             setLeader(container.getContent().leaderAdr);
+        }
+    };
+
+    Handler handleSuspect = new Handler<Suspect>() {
+        @Override
+        public void handle(Suspect event) {
+            LOG.info("{}", "suspect");
+        }
+    };
+
+    Handler handleRestore = new Handler<Restore>() {
+        @Override
+        public void handle(Restore event) {
+            LOG.info("{}", "restore");
         }
     };
 
