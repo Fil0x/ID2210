@@ -89,10 +89,11 @@ public class LeaderSelectComp extends ComponentDefinition {
             fingers = sample.getGradientFingers();
             neighbors = sample.getGradientNeighbours();
 
-            if (sequenceNumber++ > 200) {
+            if (sequenceNumber++ > 100) {
                 if (iAmTheLeader()) {
                     setLeader(selfAdr);
                 } else {
+                    if (leaderAdr != null && leaderAdr.equals(selfAdr)) leaderAdr = null;
                     leaderPull();
                 }
             }
