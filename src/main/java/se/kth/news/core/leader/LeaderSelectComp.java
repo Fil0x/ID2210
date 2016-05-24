@@ -62,12 +62,13 @@ public class LeaderSelectComp extends ComponentDefinition {
     private List<Container<KAddress, NewsView>> neighbors;
     private int sequenceNumber = 0;
     private KAddress leaderAdr;
+    private Set<KAddress> suspected = new HashSet<>();
 
     public LeaderSelectComp(Init init) {
         selfAdr = init.selfAdr;
         logPrefix = "<nid:" + selfAdr.getId() + ">";
         LOG.debug("{}initiating...", logPrefix);
-        
+
         viewComparator = init.viewComparator;
 
         subscribe(handleStart, control);
@@ -84,7 +85,7 @@ public class LeaderSelectComp extends ComponentDefinition {
             LOG.debug("{}starting...", logPrefix);
         }
     };
-    
+
     Handler handleGradientSample = new Handler<TGradientSample>() {
         @Override
         public void handle(TGradientSample sample) {
@@ -96,39 +97,97 @@ public class LeaderSelectComp extends ComponentDefinition {
             fingers = sample.getGradientFingers();
             neighbors = sample.getGradientNeighbours();
 
-            if (sequenceNumber++ > 100) {
-                if (iAmTheLeader()) {
-                    setLeader(selfAdr);
-                } else {
-                    if (leaderAdr != null && leaderAdr.equals(selfAdr)) leaderAdr = null;
-                    leaderPull();
-                }
+            if (sequenceNumber == 100 && iAmTheLeader()) {
+                setLeader(selfAdr);
+            }
+
+            if (sequenceNumber++ > 100 && !selfAdr.equals(leaderAdr)) {
+                leaderPull();
             }
         }
     };
 
+    Handler handleSuspect = new Handler<Suspect>() {
+        @Override
+        public void handle(Suspect event) {
+            LOG.debug("{} suspect: {}", logPrefix, event.node.getId());
+            suspected.add(event.node);
+            if (iAmTheLeader()) setLeader(selfAdr);
+        }
+    };
+
+    Handler handleRestore = new Handler<Restore>() {
+        @Override
+        public void handle(Restore event) {
+            LOG.debug("{} restore: {}", logPrefix, event.node.getId());
+            suspected.remove(event.node);
+            if (iAmTheLeader()) setLeader(selfAdr);
+        }
+    };
+
+    ClassMatchedHandler handleLeaderPull
+            = new ClassMatchedHandler<LeaderPull, KContentMsg<?, ?, LeaderPull>>() {
+        @Override
+        public void handle(LeaderPull content, KContentMsg<?, ?, LeaderPull> container) {
+            if (leaderAdr != null) {
+                KHeader header = new BasicHeader(selfAdr, container.getHeader().getSource(), Transport.UDP);
+                KContentMsg msg = new BasicContentMsg(header, new LeaderPush(leaderAdr));
+                trigger(msg, networkPort);
+            }
+        }
+    };
+
+    ClassMatchedHandler handleLeaderPush
+            = new ClassMatchedHandler<LeaderPush, KContentMsg<?, ?, LeaderPush>>() {
+        @Override
+        public void handle(LeaderPush content, KContentMsg<?, ?, LeaderPush> container) {
+            setLeader(container.getContent().leaderAdr);
+        }
+    };
+
     private boolean iAmTheLeader() {
-        if (viewComparator.compare(selfView, getHighestFinger().getContent()) < 0) {
+        if (viewComparator.compare(selfView, getMaxRank(fingers, suspected).getContent()) < 0) {
             return false;
         } else {
             return true;
         }
     }
 
-    private void setLeader(KAddress leaderAdr_) {
-        if (leaderAdr == null || !leaderAdr.equals(leaderAdr_)) {
-            trigger(new LeaderUpdate(leaderAdr = leaderAdr_), leaderPort);
-            if (hasLeaderNeighbor()) {
-                Set<KAddress> nodesToMonitor = getAddressSet(neighbors);
-                trigger(new MonitorRequest(nodesToMonitor), monitorPort);
-                LOG.info("{}requested monitoring:{}", logPrefix, nodesToMonitor);
-                //if (!hasLeaderFinger()) System.out.println("WTF");
+    private void setLeader(KAddress newLeaderAdr) {
+        if (leaderAdr == null || !leaderAdr.equals(newLeaderAdr)) {
+            leaderAdr = newLeaderAdr;
+            trigger(new LeaderUpdate(leaderAdr), leaderPort);
+            if (!selfAdr.equals(leaderAdr)) {
+                trigger(new MonitorRequest(new HashSet<>(Arrays.asList(leaderAdr))), monitorPort);
             }
         }
     }
 
-    private Set<KAddress> getAddressSet(List<Container<KAddress, NewsView>> containerList) {
-        HashSet<KAddress> addressSet = new HashSet<>();
+    private void leaderPull() {
+        Container<KAddress, NewsView> highestFinger = getMaxRank(fingers);
+        KHeader header = new BasicHeader(selfAdr, highestFinger.getSource(), Transport.UDP);
+        KContentMsg msg = new BasicContentMsg(header, new LeaderPull());
+        trigger(msg, networkPort);
+    }
+
+    private Container<KAddress, NewsView> getMaxRank(List<Container<KAddress, NewsView>> nodes) {
+        return getMaxRank(nodes, new HashSet<KAddress>());
+    }
+
+    private Container<KAddress, NewsView> getMaxRank(List<Container<KAddress, NewsView>> nodes, Set<KAddress> ignore) {
+        Container<KAddress, NewsView> maxRank = null;
+        for (Container<KAddress, NewsView> c : nodes) {
+            if (!ignore.contains(c.getSource())) {
+                if (maxRank == null || viewComparator.compare(maxRank.getContent(), c.getContent()) < 0) {
+                    maxRank = c;
+                }
+            }
+        }
+        return maxRank;
+    }
+
+    /*private Set<KAddress> getAddressSet(List<Container<KAddress, NewsView>> containerList) {
+        Set<KAddress> addressSet = new HashSet<>();
         for (Container<KAddress, NewsView> c : containerList) {
             addressSet.add(c.getSource());
         }
@@ -151,58 +210,7 @@ public class LeaderSelectComp extends ComponentDefinition {
             }
         }
         return false;
-    }
-
-    private void leaderPull() {
-        Container<KAddress, NewsView> highestFinger = getHighestFinger();
-        KHeader header = new BasicHeader(selfAdr, highestFinger.getSource(), Transport.UDP);
-        KContentMsg msg = new BasicContentMsg(header, new LeaderPull());
-        trigger(msg, networkPort);
-    }
-
-    private Container<KAddress, NewsView> getHighestFinger() {
-        Container<KAddress, NewsView> highestFinger = fingers.get(0);
-        for (int i = 1; i < fingers.size(); i++) {
-            if (viewComparator.compare(highestFinger.getContent(), fingers.get(i).getContent()) < 0) {
-                highestFinger = fingers.get(i);
-            }
-        }
-        return highestFinger;
-    }
-
-    ClassMatchedHandler handleLeaderPull
-            = new ClassMatchedHandler<LeaderPull, KContentMsg<?, ?, LeaderPull>>() {
-        @Override
-        public void handle(LeaderPull content, KContentMsg<?, ?, LeaderPull> container) {
-            if (leaderAdr != null) {
-                KHeader header = new BasicHeader(selfAdr, container.getHeader().getSource(), Transport.UDP);
-                KContentMsg msg = new BasicContentMsg(header, new LeaderPush(leaderAdr));
-                trigger(msg, networkPort);
-            }
-        }
-    };
-
-    ClassMatchedHandler handleLeaderPush
-            = new ClassMatchedHandler<LeaderPush, KContentMsg<?, ?, LeaderPush>>() {
-        @Override
-        public void handle(LeaderPush content, KContentMsg<?, ?, LeaderPush> container) {
-            setLeader(container.getContent().leaderAdr);
-        }
-    };
-
-    Handler handleSuspect = new Handler<Suspect>() {
-        @Override
-        public void handle(Suspect event) {
-            LOG.info("{}", "suspect");
-        }
-    };
-
-    Handler handleRestore = new Handler<Restore>() {
-        @Override
-        public void handle(Restore event) {
-            LOG.info("{}", "restore");
-        }
-    };
+    }*/
 
     public static class Init extends se.sics.kompics.Init<LeaderSelectComp> {
 

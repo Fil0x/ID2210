@@ -1,4 +1,6 @@
 package se.kth.news.core.leader;
 
-public class LeaderPull {
+import java.io.Serializable;
+
+public class LeaderPull implements Serializable {
 }

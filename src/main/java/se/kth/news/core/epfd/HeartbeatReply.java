@@ -1,4 +1,6 @@
 package se.kth.news.core.epfd;
 
-public class HeartbeatReply {
+import java.io.Serializable;
+
+public class HeartbeatReply implements Serializable {
 }

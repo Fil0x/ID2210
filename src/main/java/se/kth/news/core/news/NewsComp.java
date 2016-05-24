@@ -55,7 +55,6 @@ public class NewsComp extends ComponentDefinition {
     //*******************************NODE_SETUP*********************************
     public static final int NUMBER_OF_NODES = 100;
     public static final int TTL = -1;
-    public static final boolean CHEATING = false;
     //*******************************LOGGING************************************
     private static final Logger LOG = LoggerFactory.getLogger(NewsComp.class);
     private String logPrefix = " ";
@@ -107,10 +106,12 @@ public class NewsComp extends ComponentDefinition {
     };
 
     private void updateLocalNewsView() {
-        if (CHEATING) if (leaderAdr != null) return; // <-- makes the overlay more stable
         int utility = news2.size();
+        if (selfAdr.getId().toString().equals("3") ) {
+            utility += 450;
+        }
         if (selfAdr.getId().toString().equals("5") ) {
-            utility += 100;
+            utility += 500;
         }
         NewsView localNewsView = new NewsView(selfAdr.getId(), utility);
         LOG.debug("{}informing overlays of new view", logPrefix);
@@ -222,7 +223,8 @@ public class NewsComp extends ComponentDefinition {
     Handler handleLeader = new Handler<LeaderUpdate>() {
         @Override
         public void handle(LeaderUpdate event) {
-            LOG.debug("{} new leader: {}", logPrefix, (leaderAdr = event.leaderAdr).getId());
+            leaderAdr = event.leaderAdr;
+            LOG.info("{} new leader: {}", logPrefix, leaderAdr.getId());
         }
     };
 

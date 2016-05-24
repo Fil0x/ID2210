@@ -89,13 +89,14 @@ public class AppMngrComp extends ComponentDefinition {
             connectMonitor();
             connectLeaderSelect();
             connectNews();
+            trigger(Start.event, monitorComp.control());
             trigger(Start.event, leaderSelectComp.control());
             trigger(Start.event, newsComp.control());
         }
     };
 
     private void connectMonitor() {
-        monitorComp = create(MonitorComp.class, se.sics.kompics.Init.NONE);
+        monitorComp = create(MonitorComp.class, new MonitorComp.Init(selfAdr));
         connect(monitorComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
         connect(monitorComp.getNegative(Network.class), extPorts.networkPort, Channel.TWO_WAY);
     }
