@@ -47,7 +47,7 @@ public class LeaderSelectComp extends SubComponent {
     //*******************************INTERNAL_STATE*****************************
     private Comparator viewComparator;
     private NewsView selfView;
-    private List<Container<KAddress, NewsView>> fingers;
+    private List<Container<KAddress, NewsView>> acquaintances;
     private int sequenceNumber = -1;
     private int sessionId = -1;
     private KAddress leaderAdr;
@@ -84,11 +84,11 @@ public class LeaderSelectComp extends SubComponent {
             sequenceNumber += 1;
 
             LOG.debug("{}neighbours:{}", logPrefix, sample.gradientNeighbours);
-            LOG.debug("{}fingers:{}", logPrefix, sample.gradientFingers);
+            LOG.debug("{}fingers2:{}", logPrefix, sample.gradientFingers);
             LOG.debug("{}local view:{}", logPrefix, sample.selfView);
 
             selfView = (NewsView) sample.selfView;
-            fingers = sample.getGradientFingers();
+            acquaintances = Utils.merge(sample.getGradientFingers(), sample.getGradientNeighbours());
 
             if (sequenceNumber > 100) {
                 updateMonitor();
@@ -127,7 +127,7 @@ public class LeaderSelectComp extends SubComponent {
             KAddress source = container.getHeader().getSource();
             switch (content.header) {
                 case "canCommit?":
-                    Container<KAddress, NewsView> maxRank = Utils.maxRank(fingers, suspected);
+                    Container<KAddress, NewsView> maxRank = Utils.maxRank(acquaintances, suspected);
                     if (maxRank == null || viewComparator.compare(content.body, maxRank.getContent()) >= 0) {
                         triggerSend(source, new Leader2PC(content.sid, "Yes", null));
                     } else {
@@ -138,14 +138,14 @@ public class LeaderSelectComp extends SubComponent {
                     if (content.sid == sessionId) {
                         unconfirmed.remove(source);
                         if (unconfirmed.isEmpty()) {
-                            triggerBroadcast(Utils.addressSet(fingers), new Leader2PC(sessionId, "doCommit", selfAdr));
+                            triggerBroadcast(Utils.addressSet(acquaintances), new Leader2PC(sessionId, "doCommit", selfAdr));
                             trustLeader(selfAdr);
                         }
                     }
                     break;
                 case "No":
                     if (content.sid == sessionId) {
-                        triggerBroadcast(Utils.addressSet(fingers), new Leader2PC(sessionId, "abortCommit", null));
+                        triggerBroadcast(Utils.addressSet(acquaintances), new Leader2PC(sessionId, "abortCommit", null));
                     }
                     break;
                 case "doCommit":
@@ -182,13 +182,13 @@ public class LeaderSelectComp extends SubComponent {
 
     //*******************************HELP_FUNCTIONS*****************************
     private void updateMonitor() {
-        Set<KAddress> nodeToMonitor = new HashSet<>(Utils.addressSet(fingers));
+        Set<KAddress> nodeToMonitor = new HashSet<>(Utils.addressSet(acquaintances));
         if (leaderAdr != null) nodeToMonitor.add(leaderAdr);
         trigger(new MonitorRequest(nodeToMonitor), monitorPort);
     }
 
     private boolean highestRank() {
-        Container<KAddress, NewsView> maxRank = Utils.maxRank(fingers, suspected);
+        Container<KAddress, NewsView> maxRank = Utils.maxRank(acquaintances, suspected);
         if (maxRank == null || viewComparator.compare(selfView, maxRank.getContent()) > 0) {
             return true;
         }
@@ -197,7 +197,7 @@ public class LeaderSelectComp extends SubComponent {
 
     private void initElection() {
         sessionId += 1;
-        unconfirmed = Utils.addressSet(fingers);
+        unconfirmed = Utils.addressSet(acquaintances);
         unconfirmed.removeAll(suspected);
         triggerBroadcast(unconfirmed, new Leader2PC(sessionId, "canCommit?", selfView));
     }
@@ -210,7 +210,7 @@ public class LeaderSelectComp extends SubComponent {
     }
 
     private void leaderPull() {
-        triggerSend(Utils.maxRank(fingers).getSource(), new LeaderPull());
+        triggerSend(Utils.maxRank(acquaintances).getSource(), new LeaderPull());
     }
 
     public static class Init extends se.sics.kompics.Init<LeaderSelectComp> {
