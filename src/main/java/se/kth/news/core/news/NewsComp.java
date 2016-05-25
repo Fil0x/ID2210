@@ -70,6 +70,8 @@ public class NewsComp extends SubComponent {
     private Map<String, KAddress> news2KAddress = new HashMap<>();
     private Map<String, Integer> news2SeqNum = new HashMap<>();
 
+    private Map<String, Ping> unconfirmed = new HashMap<>(); // newsId -> news
+
     public NewsComp(Init init) {
         selfAdr = init.selfAdr;
         logPrefix = "<nid:" + selfAdr.getId() + ">";
@@ -112,6 +114,7 @@ public class NewsComp extends SubComponent {
             neighbors = sample.getGradientNeighbours();
 
             if (leaderAdr != null) {
+                resend();
                 newsPull();
 
                 if (selfAdr.getId().toString().equals("1")) {
@@ -139,11 +142,15 @@ public class NewsComp extends SubComponent {
                         System.out.println("news coverage\t" + coverageSum / numberOfNews);
                         System.out.println("node knowledge\t" + knowledgeSum / NUMBER_OF_NODES);
                         System.out.println("for each node\t" + knowledgeList);*/
+
+                        System.out.println("unconfirmed: " + unconfirmed.size());
                     }
 
                     if (sequenceNumber < 303) {
                         newsCoverage.put(sequenceNumber, new HashSet<String>());
-                        triggerSend(leaderAdr, new Ping(selfAdr, sequenceNumber, null, ScenarioSetup.TTL));
+                        Ping ping = new Ping(selfAdr, sequenceNumber, null, ScenarioSetup.TTL);
+                        unconfirmed.put(ping.getIdentifier(), ping);
+                        triggerSend(leaderAdr, ping);
                     }
                 }
             }
@@ -213,6 +220,8 @@ public class NewsComp extends SubComponent {
 
                 // Send Pong
                 triggerSend(news2KAddress.get(newsItem), new Pong(news2SeqNum.get(newsItem)));
+
+                unconfirmed.remove(newsItem);
             }
         }
     };
@@ -233,6 +242,12 @@ public class NewsComp extends SubComponent {
 
     private void newsPull() {
         triggerSend(Utils.maxRank(fingers).getSource(), new NewsPull());
+    }
+
+    private void resend() {
+        for (String newsId : unconfirmed.keySet()) {
+            triggerSend(leaderAdr, unconfirmed.get(newsId));
+        }
     }
 
     public static class Init extends se.sics.kompics.Init<NewsComp> {

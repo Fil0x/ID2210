@@ -21,7 +21,7 @@ public class MonitorComp extends SubComponent {
     //*******************************CONNECTIONS********************************
     Negative<MonitorPort> monitorPort = provides(MonitorPort.class);
     //*******************************INTERNAL_STATE*****************************
-    private static final int DELTA = 1000;
+    private static final int DELTA = 10000;
     private UUID lastSetTimer;
     private Set<KAddress> allNodes;
     private Set<KAddress> alive;
