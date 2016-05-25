@@ -54,7 +54,7 @@ public class LeaderSelectComp extends ComponentDefinition {
     //*******************************INTERNAL_STATE*****************************
     private Comparator viewComparator;
     private NewsView selfView;
-    private List<Container<KAddress, NewsView>> fingers;
+    private List<Container<KAddress, NewsView>> acquaintances;
     private int sequenceNumber = 0;
     private KAddress leaderAdr;
 
@@ -93,7 +93,7 @@ public class LeaderSelectComp extends ComponentDefinition {
             LOG.debug("{}local view:{}", logPrefix, sample.selfView);
 
             selfView = (NewsView) sample.selfView;
-            fingers = sample.getGradientFingers();
+            acquaintances = Utils.merge(sample.getGradientFingers(), sample.getGradientNeighbours());
 
             if (sequenceNumber > 100) {
                 if (highestRank()) {
@@ -113,7 +113,7 @@ public class LeaderSelectComp extends ComponentDefinition {
             switch (content.header) {
                 case "canCommit?":
                     LOG.info("{} recived canCommit? from: {}", logPrefix, source.getId());
-                    Container<KAddress, NewsView> maxRank = Utils.maxRank(fingers);
+                    Container<KAddress, NewsView> maxRank = Utils.maxRank(acquaintances);
                     if (maxRank == null || viewComparator.compare(content.body, maxRank.getContent()) >= 0) {
                         triggerSend(source, new Leader2PC(content.sid, "Yes", null));
                     } else {
@@ -124,14 +124,14 @@ public class LeaderSelectComp extends ComponentDefinition {
                     if (content.sid == sessionId) {
                         unconfirmed.remove(source);
                         if (unconfirmed.isEmpty()) {
-                            triggerBroadcast(Utils.addressSet(fingers), new Leader2PC(sessionId, "doCommit", selfAdr));
+                            triggerBroadcast(Utils.addressSet(acquaintances), new Leader2PC(sessionId, "doCommit", selfAdr));
                             trustLeader(selfAdr);
                         }
                     }
                     break;
                 case "No":
                     if (content.sid == sessionId) {
-                        triggerBroadcast(Utils.addressSet(fingers), new Leader2PC(sessionId, "abortCommit", null));
+                        triggerBroadcast(Utils.addressSet(acquaintances), new Leader2PC(sessionId, "abortCommit", null));
                     }
                     break;
                 case "doCommit":
@@ -170,7 +170,7 @@ public class LeaderSelectComp extends ComponentDefinition {
 
     //*******************************HELP_FUNCTIONS*****************************
     private boolean highestRank() {
-        Container<KAddress, NewsView> maxRank = Utils.maxRank(fingers);
+        Container<KAddress, NewsView> maxRank = Utils.maxRank(acquaintances);
         if (maxRank == null || viewComparator.compare(selfView, maxRank.getContent()) > 0) {
             return true;
         }
@@ -179,7 +179,7 @@ public class LeaderSelectComp extends ComponentDefinition {
 
     private void initElection() {
         sessionId += 1;
-        unconfirmed = Utils.addressSet(fingers);
+        unconfirmed = Utils.addressSet(acquaintances);
         triggerBroadcast(unconfirmed, new Leader2PC(sessionId, "canCommit?", selfView));
     }
 
@@ -191,7 +191,7 @@ public class LeaderSelectComp extends ComponentDefinition {
     }
 
     private void leaderPull() {
-        KHeader header = new BasicHeader(selfAdr, Utils.maxRank(fingers).getSource(), Transport.UDP);
+        KHeader header = new BasicHeader(selfAdr, Utils.maxRank(acquaintances).getSource(), Transport.UDP);
         KContentMsg msg = new BasicContentMsg(header, new LeaderPull());
         trigger(msg, networkPort);
     }

@@ -5,10 +5,7 @@ import se.kth.news.core.news.util.NewsViewComparator;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.other.Container;
 
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class Utils {
 
@@ -36,6 +33,25 @@ public class Utils {
             }
         }
         return maxRank;
+    }
+
+    public static List<Container<KAddress, NewsView>> merge(List<Container<KAddress, NewsView>> l1, List<Container<KAddress, NewsView>> l2) {
+        List<Container<KAddress, NewsView>> merge = new LinkedList<>(l1);
+        for (Container<KAddress, NewsView> c : l2) {
+            if (!contains(l1, c.getSource().getId().toString())) {
+                merge.add(c);
+            }
+        }
+        return merge;
+    }
+
+    private static boolean contains(List<Container<KAddress, NewsView>> containerList, String nodeId) {
+        for (Container<KAddress, NewsView> c : containerList) {
+            if (c.getSource().getId().toString().equals(nodeId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static Set intersection(Set s1, Set s2) {
