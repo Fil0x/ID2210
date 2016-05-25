@@ -59,7 +59,7 @@ public class NewsComp extends SubComponent {
     //*******************************EXTERNAL_STATE*****************************
     private Identifier gradientOId;
     //*******************************INTERNAL_STATE*****************************
-    private List<Container<KAddress, NewsView>> fingers;
+    private List<Container<KAddress, NewsView>> acquaintances;
     private List<Container<KAddress, NewsView>> neighbors;
     private int sequenceNumber = -1;
     private KAddress leaderAdr;
@@ -108,8 +108,8 @@ public class NewsComp extends SubComponent {
         public void handle(TGradientSample sample) {
             sequenceNumber += 1;
 
-            fingers = sample.getGradientFingers();
-            neighbors = sample.getGradientNeighbours();
+            //acquaintances = Utils.merge(sample.getGradientFingers(), sample.getGradientNeighbours());
+            acquaintances = sample.getGradientNeighbours();
 
             if (leaderAdr != null) {
                 newsPull();
@@ -232,7 +232,7 @@ public class NewsComp extends SubComponent {
     }
 
     private void newsPull() {
-        triggerSend(Utils.maxRank(fingers).getSource(), new NewsPull());
+        triggerSend(Utils.maxRank(acquaintances).getSource(), new NewsPull());
     }
 
     public static class Init extends se.sics.kompics.Init<NewsComp> {

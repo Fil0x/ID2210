@@ -88,7 +88,8 @@ public class LeaderSelectComp extends SubComponent {
             LOG.debug("{}local view:{}", logPrefix, sample.selfView);
 
             selfView = (NewsView) sample.selfView;
-            acquaintances = Utils.merge(sample.getGradientFingers(), sample.getGradientNeighbours());
+            //acquaintances = Utils.merge(sample.getGradientFingers(), sample.getGradientNeighbours());
+            acquaintances = sample.getGradientNeighbours();
 
             if (sequenceNumber > 100) {
                 updateMonitor();
