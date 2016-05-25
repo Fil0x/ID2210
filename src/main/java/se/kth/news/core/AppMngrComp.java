@@ -118,6 +118,7 @@ public class AppMngrComp extends ComponentDefinition {
         connect(newsComp.getNegative(GradientPort.class), extPorts.gradientPort, Channel.TWO_WAY);
         connect(newsComp.getNegative(LeaderSelectPort.class), leaderSelectComp.getPositive(LeaderSelectPort.class), Channel.TWO_WAY);
         connect(newsComp.getPositive(OverlayViewUpdatePort.class), extPorts.viewUpdatePort, Channel.TWO_WAY);
+        connect(newsComp.getNegative(MonitorPort.class), monitorComp.getPositive(MonitorPort.class), Channel.TWO_WAY);
     }
 
     public static class Init extends se.sics.kompics.Init<AppMngrComp> {

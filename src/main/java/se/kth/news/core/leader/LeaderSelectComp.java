@@ -51,6 +51,7 @@ public class LeaderSelectComp extends SubComponent {
     private int sequenceNumber = -1;
     private int sessionId = -1;
     private KAddress leaderAdr;
+
     private Set<KAddress> suspected = new HashSet<>();
     private Set<KAddress> unconfirmed;
 
@@ -210,7 +211,10 @@ public class LeaderSelectComp extends SubComponent {
     }
 
     private void leaderPull() {
-        triggerSend(Utils.maxRank(acquaintances).getSource(), new LeaderPull());
+        Container<KAddress, NewsView> maxRank = Utils.maxRank(acquaintances, suspected);
+        if (maxRank != null) {
+            triggerSend(maxRank.getSource(), new LeaderPull());
+        }
     }
 
     public static class Init extends se.sics.kompics.Init<LeaderSelectComp> {

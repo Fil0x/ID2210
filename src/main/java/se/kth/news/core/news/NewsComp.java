@@ -23,6 +23,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.kth.news.core.SubComponent;
 import se.kth.news.core.Utils;
+import se.kth.news.core.epfd.MonitorPort;
+import se.kth.news.core.epfd.Restore;
+import se.kth.news.core.epfd.Suspect;
+import se.kth.news.core.leader.LeaderPull;
 import se.kth.news.core.leader.LeaderSelectPort;
 import se.kth.news.core.leader.LeaderUpdate;
 import se.kth.news.core.news.util.NewsView;
@@ -55,11 +59,12 @@ public class NewsComp extends SubComponent {
     Positive<CroupierPort> croupierPort = requires(CroupierPort.class);
     Positive<GradientPort> gradientPort = requires(GradientPort.class);
     Positive<LeaderSelectPort> leaderPort = requires(LeaderSelectPort.class);
+    Positive<MonitorPort> monitorPort = requires(MonitorPort.class);
     Negative<OverlayViewUpdatePort> viewUpdatePort = provides(OverlayViewUpdatePort.class);
     //*******************************EXTERNAL_STATE*****************************
     private Identifier gradientOId;
     //*******************************INTERNAL_STATE*****************************
-    private List<Container<KAddress, NewsView>> fingers;
+    private List<Container<KAddress, NewsView>> acquaintances;
     private List<Container<KAddress, NewsView>> neighbors;
     private int sequenceNumber = -1;
     private KAddress leaderAdr;
@@ -70,6 +75,7 @@ public class NewsComp extends SubComponent {
     private Map<String, KAddress> news2KAddress = new HashMap<>();
     private Map<String, Integer> news2SeqNum = new HashMap<>();
 
+    private Set<KAddress> suspected = new HashSet<>();
     private Map<String, Ping> unconfirmed = new HashMap<>(); // newsId -> news
 
     public NewsComp(Init init) {
@@ -83,6 +89,8 @@ public class NewsComp extends SubComponent {
         subscribe(handleCroupierSample, croupierPort);
         subscribe(handleGradientSample, gradientPort);
         subscribe(handleLeader, leaderPort);
+        subscribe(handleSuspect, monitorPort);
+        subscribe(handleRestore, monitorPort);
         subscribe(handlePing, networkPort);
         subscribe(handlePong, networkPort);
         subscribe(handleNewsPull, networkPort);
@@ -110,8 +118,7 @@ public class NewsComp extends SubComponent {
         public void handle(TGradientSample sample) {
             sequenceNumber += 1;
 
-            fingers = sample.getGradientFingers();
-            neighbors = sample.getGradientNeighbours();
+            acquaintances = Utils.merge(sample.getGradientFingers(), sample.getGradientNeighbours());
 
             if (leaderAdr != null) {
                 resend();
@@ -143,7 +150,7 @@ public class NewsComp extends SubComponent {
                         System.out.println("node knowledge\t" + knowledgeSum / NUMBER_OF_NODES);
                         System.out.println("for each node\t" + knowledgeList);*/
 
-                        System.out.println("unconfirmed: " + unconfirmed.size());
+                        //System.out.println("unconfirmed: " + unconfirmed.size());
                     }
 
                     if (sequenceNumber < 303) {
@@ -161,7 +168,25 @@ public class NewsComp extends SubComponent {
         @Override
         public void handle(LeaderUpdate event) {
             leaderAdr = event.leaderAdr;
-            LOG.info("{} new leader: {}", logPrefix, leaderAdr.getId());
+            //LOG.info("{} new leader: {}", logPrefix, leaderAdr.getId());
+        }
+    };
+
+    Handler handleSuspect = new Handler<Suspect>() {
+        @Override
+        public void handle(Suspect event) {
+            if (suspected.add(event.node)) {
+                LOG.info("{} suspect: {}", logPrefix, event.node.getId());
+            }
+        }
+    };
+
+    Handler handleRestore = new Handler<Restore>() {
+        @Override
+        public void handle(Restore event) {
+            if (suspected.remove(event.node)) {
+                LOG.info("{} restore: {}", logPrefix, event.node.getId());
+            }
         }
     };
 
@@ -241,7 +266,10 @@ public class NewsComp extends SubComponent {
     }
 
     private void newsPull() {
-        triggerSend(Utils.maxRank(fingers).getSource(), new NewsPull());
+        Container<KAddress, NewsView> maxRank = Utils.maxRank(acquaintances, suspected);
+        if (maxRank != null) {
+            triggerSend(maxRank.getSource(), new NewsPull());
+        }
     }
 
     private void resend() {
