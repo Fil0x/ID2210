@@ -29,8 +29,8 @@ import se.sics.ktoolbox.util.network.KAddress;
 public class SimNodeIdExtractor implements IdentifierExtractor {
     @Override
     public Identifier extract(Address adr) {
-        KAddress usedAdr = (KAddress)adr;
-        int nodeId = ((IntIdentifier)usedAdr.getId()).id;
+        KAddress usedAdr = (KAddress) adr;
+        int nodeId = ((IntIdentifier) usedAdr.getId()).id;
         return new SimNodeIdentifier(nodeId);
     }
 }

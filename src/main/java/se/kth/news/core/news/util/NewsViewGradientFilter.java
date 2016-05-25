@@ -21,10 +21,9 @@ package se.kth.news.core.news.util;
 import se.sics.ktoolbox.gradient.GradientFilter;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class NewsViewGradientFilter implements GradientFilter<NewsView>{
+public class NewsViewGradientFilter implements GradientFilter<NewsView> {
 
     @Override
     public boolean retainOther(NewsView selfPV, NewsView otherPV) {
@@ -35,5 +34,4 @@ public class NewsViewGradientFilter implements GradientFilter<NewsView>{
     public boolean cleanOldView(NewsView newSelfPV, NewsView oldSelfPV) {
         return false;
     }
-    
 }

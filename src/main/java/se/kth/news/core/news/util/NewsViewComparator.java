@@ -19,6 +19,7 @@
 package se.kth.news.core.news.util;
 
 import com.google.common.primitives.Ints;
+
 import java.util.Comparator;
 
 /**
@@ -27,13 +28,13 @@ import java.util.Comparator;
 public class NewsViewComparator implements Comparator<NewsView> {
     @Override
     public int compare(NewsView o1, NewsView o2) {
-        if(o1 == o2) {
+        if (o1 == o2) {
             return 0;
         }
-        if(o1 == null || o2 == null) {
+        if (o1 == null || o2 == null) {
             throw new NullPointerException();
         }
-        if(o1.localNewsCount != o2.localNewsCount) {
+        if (o1.localNewsCount != o2.localNewsCount) {
             return Ints.compare(o1.localNewsCount, o2.localNewsCount);
         }
         return o1.nodeId.compareTo(o2.nodeId);

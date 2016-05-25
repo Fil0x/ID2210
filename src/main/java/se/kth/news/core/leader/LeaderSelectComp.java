@@ -48,7 +48,7 @@ public class LeaderSelectComp extends SubComponent {
     private Comparator viewComparator;
     private NewsView selfView;
     private List<Container<KAddress, NewsView>> fingers;
-    private int sequenceNumber = 0;
+    private int sequenceNumber = -1;
     private int sessionId = -1;
     private KAddress leaderAdr;
     private Set<KAddress> suspected = new HashSet<>();
@@ -105,9 +105,9 @@ public class LeaderSelectComp extends SubComponent {
     Handler handleSuspect = new Handler<Suspect>() {
         @Override
         public void handle(Suspect event) {
-             if (suspected.add(event.node)) {
-                 LOG.info("{} suspect: {}", logPrefix, event.node.getId());
-             }
+            if (suspected.add(event.node)) {
+                LOG.info("{} suspect: {}", logPrefix, event.node.getId());
+            }
         }
     };
 
@@ -130,8 +130,7 @@ public class LeaderSelectComp extends SubComponent {
                     Container<KAddress, NewsView> maxRank = Utils.maxRank(fingers, suspected);
                     if (maxRank == null || viewComparator.compare(content.body, maxRank.getContent()) >= 0) {
                         triggerSend(source, new Leader2PC(content.sid, "Yes", null));
-                    }
-                    else {
+                    } else {
                         triggerSend(source, new Leader2PC(content.sid, "No", null));
                     }
                     break;
@@ -214,7 +213,6 @@ public class LeaderSelectComp extends SubComponent {
     private void leaderPull() {
         triggerSend(Utils.maxRank(fingers).getSource(), new LeaderPull());
     }
-
 
     public static class Init extends se.sics.kompics.Init<LeaderSelectComp> {
 

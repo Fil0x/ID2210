@@ -61,7 +61,7 @@ public class NewsComp extends SubComponent {
     //*******************************INTERNAL_STATE*****************************
     private List<Container<KAddress, NewsView>> fingers;
     private List<Container<KAddress, NewsView>> neighbors;
-    private int sequenceNumber = 0;
+    private int sequenceNumber = -1;
     private KAddress leaderAdr;
     private Map<Integer, Set<String>> newsCoverage = new HashMap<>();  // news item -> {nodes}
     private Map<String, Set<Integer>> nodeKnowledge = new HashMap<>(); // node -> {news items}
@@ -106,15 +106,15 @@ public class NewsComp extends SubComponent {
     Handler handleGradientSample = new Handler<TGradientSample>() {
         @Override
         public void handle(TGradientSample sample) {
+            sequenceNumber += 1;
 
             fingers = sample.getGradientFingers();
             neighbors = sample.getGradientNeighbours();
-            sequenceNumber += 1;
 
             if (leaderAdr != null) {
                 newsPull();
 
-                if (selfAdr.getId().toString().equals("1") ) {
+                if (selfAdr.getId().toString().equals("1")) {
                     // Print results
                     int numberOfNews = newsCoverage.keySet().size();
                     if (numberOfNews > 0) {
@@ -220,10 +220,10 @@ public class NewsComp extends SubComponent {
     //*******************************HELP_FUNCTIONS*****************************
     private void updateLocalNewsView() {
         int utility = news2.size();
-        if (selfAdr.getId().toString().equals("3") ) {
+        if (selfAdr.getId().toString().equals("3")) {
             utility += 450;
         }
-        if (selfAdr.getId().toString().equals("5") ) {
+        if (selfAdr.getId().toString().equals("5")) {
             utility += 500;
         }
         NewsView localNewsView = new NewsView(selfAdr.getId(), utility);

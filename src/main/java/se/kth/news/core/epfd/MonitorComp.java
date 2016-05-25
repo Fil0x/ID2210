@@ -62,25 +62,23 @@ public class MonitorComp extends SubComponent {
     Handler<MonitorTimeout> handleMonitorTimeout = new Handler<MonitorTimeout>() {
         @Override
         public void handle(MonitorTimeout monitorTimeout) {
-            if (monitorTimeout.getTimeoutId() != lastSetTimer) {
-                return;
-            }
-            if (!Utils.intersection(alive, suspected).isEmpty()) {
-                delay += DELTA;
-            }
-            for (KAddress p : allNodes) {
-                if (!alive.contains(p) && !suspected.contains(p)) {
-                    suspected.add(p);
-                    trigger(new Suspect(p), monitorPort);
+            if (monitorTimeout.getTimeoutId() == lastSetTimer) { // check is not 100%!
+                if (!Utils.intersection(alive, suspected).isEmpty()) {
+                    delay += DELTA;
                 }
-                else if (alive.contains(p) && suspected.contains(p)) {
-                    suspected.remove(p);
-                    trigger(new Restore(p), monitorPort);
+                for (KAddress p : allNodes) {
+                    if (!alive.contains(p) && !suspected.contains(p)) {
+                        suspected.add(p);
+                        trigger(new Suspect(p), monitorPort);
+                    } else if (alive.contains(p) && suspected.contains(p)) {
+                        suspected.remove(p);
+                        trigger(new Restore(p), monitorPort);
+                    }
+                    triggerSend(p, new HeartbeatRequest());
                 }
-                triggerSend(p, new HeartbeatRequest());
+                alive = new HashSet<>();
+                startTimer(delay);
             }
-            alive = new HashSet<>();
-            startTimer(delay);
         }
     };
 

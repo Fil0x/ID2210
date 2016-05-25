@@ -24,11 +24,11 @@ import se.sics.kompics.simulator.network.identifier.Identifier;
  */
 public class SimNodeIdentifier implements Identifier {
     public final int nodeId;
-    
+
     public SimNodeIdentifier(int nodeId) {
         this.nodeId = nodeId;
     }
-    
+
     @Override
     public int partition(int nrPartitions) {
         return nodeId % nrPartitions;

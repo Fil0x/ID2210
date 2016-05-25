@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class NewsPush {
+
     public final Set<String> news2;
     public final Map<String, KAddress> news2KAddress;
     public final Map<String, Integer> news2SeqNum;

@@ -19,6 +19,7 @@ package se.kth.news.sim;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import se.kth.news.sim.compatibility.SimNodeIdExtractor;
 import se.kth.news.system.HostMngrComp;
 import se.sics.kompics.network.Address;
@@ -177,8 +178,8 @@ public class ScenarioGen {
                 systemSetup.start();
                 startBootstrapServer.startAfterTerminationOf(1000, systemSetup);
                 startPeers.startAfterTerminationOf(1000, startBootstrapServer);
-                killPeer.startAfterTerminationOf(500*1000, startPeers);
-                terminateAfterTerminationOf(1000*1000, startPeers);
+                killPeer.startAfterTerminationOf(500 * 1000, startPeers);
+                terminateAfterTerminationOf(1000 * 1000, startPeers);
             }
         };
 

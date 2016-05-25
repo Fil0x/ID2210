@@ -19,6 +19,7 @@ package se.kth.news.sim;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.identifiable.basic.OverlayIdFactory;
@@ -37,7 +38,7 @@ public class ScenarioSetup {
     public static final long scenarioSeed = 1234;
     public static final int appPort = 12345;
     public static final KAddress bootstrapServer;
-    
+
     public static byte overlayOwner = 0x10;
     public static final Identifier newsOverlayId;
 
@@ -57,6 +58,7 @@ public class ScenarioSetup {
             throw new RuntimeException(ex);
         }
     }
+
     public static long getNodeSeed(int nodeId) {
         return scenarioSeed + nodeId;
     }
