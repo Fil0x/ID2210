@@ -65,7 +65,6 @@ public class NewsComp extends SubComponent {
     private Identifier gradientOId;
     //*******************************INTERNAL_STATE*****************************
     private List<Container<KAddress, NewsView>> acquaintances;
-    private List<Container<KAddress, NewsView>> neighbors;
     private int sequenceNumber = -1;
     private KAddress leaderAdr;
     private Map<Integer, Set<String>> newsCoverage = new HashMap<>();  // news item -> {nodes}
@@ -118,7 +117,8 @@ public class NewsComp extends SubComponent {
         public void handle(TGradientSample sample) {
             sequenceNumber += 1;
 
-            acquaintances = Utils.merge(sample.getGradientFingers(), sample.getGradientNeighbours());
+            //acquaintances = Utils.merge(sample.getGradientFingers(), sample.getGradientNeighbours());
+            acquaintances = sample.getGradientNeighbours();
 
             if (leaderAdr != null) {
                 resend();
