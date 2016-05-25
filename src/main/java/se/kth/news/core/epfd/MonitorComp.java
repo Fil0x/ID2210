@@ -2,35 +2,27 @@ package se.kth.news.core.epfd;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.news.core.SubComponent;
+import se.kth.news.core.Utils;
 import se.sics.kompics.*;
-import se.sics.kompics.network.Network;
-import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.ScheduleTimeout;
-import se.sics.kompics.timer.Timeout;
-import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
-import se.sics.ktoolbox.util.network.KHeader;
-import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
-import se.sics.ktoolbox.util.network.basic.BasicHeader;
 
-import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
-public class MonitorComp extends ComponentDefinition {
+public class MonitorComp extends SubComponent {
 
     private static final Logger LOG = LoggerFactory.getLogger(MonitorComp.class);
     private String logPrefix = " ";
 
     //*******************************CONNECTIONS********************************
-    Positive<Timer> timerPort = requires(Timer.class);
-    Positive<Network> networkPort = requires(Network.class);
     Negative<MonitorPort> monitorPort = provides(MonitorPort.class);
-    //*******************************EXTERNAL_STATE*****************************
-    private KAddress selfAdr;
     //*******************************INTERNAL_STATE*****************************
-    private static final int DELTA = 10000;
+    private static final int DELTA = 1000;
+    private UUID lastSetTimer;
     private Set<KAddress> allNodes;
     private Set<KAddress> alive;
     private Set<KAddress> suspected;
@@ -48,6 +40,7 @@ public class MonitorComp extends ComponentDefinition {
         subscribe(handleHeartbeatReply, networkPort);
     }
 
+    //*******************************HANDLERS***********************************
     Handler handleStart = new Handler<Start>() {
         @Override
         public void handle(Start event) {
@@ -69,7 +62,10 @@ public class MonitorComp extends ComponentDefinition {
     Handler<MonitorTimeout> handleMonitorTimeout = new Handler<MonitorTimeout>() {
         @Override
         public void handle(MonitorTimeout monitorTimeout) {
-            if (!getIntersection(alive, suspected).isEmpty()) {
+            if (monitorTimeout.getTimeoutId() != lastSetTimer) {
+                return;
+            }
+            if (!Utils.intersection(alive, suspected).isEmpty()) {
                 delay += DELTA;
             }
             for (KAddress p : allNodes) {
@@ -106,29 +102,13 @@ public class MonitorComp extends ComponentDefinition {
         }
     };
 
+    //*******************************HELP_FUNCTIONS*****************************
     private void startTimer(long delay) {
         ScheduleTimeout st = new ScheduleTimeout(delay);
-        st.setTimeoutEvent(new MonitorTimeout(st));
+        MonitorTimeout mt = new MonitorTimeout(st);
+        st.setTimeoutEvent(mt);
         trigger(st, timerPort);
-    }
-
-    private Set<KAddress> getIntersection(Set<KAddress> s1, Set<KAddress> s2) {
-        Set<KAddress> intersection = new HashSet<>(s1);
-        intersection.retainAll(s2);
-        return intersection;
-    }
-
-    private void triggerSend(KAddress node, Serializable content) {
-        KHeader header = new BasicHeader(selfAdr, node, Transport.UDP);
-        KContentMsg msg = new BasicContentMsg(header, content);
-        trigger(msg, networkPort);
-    }
-
-    private class MonitorTimeout extends Timeout {
-
-        MonitorTimeout(ScheduleTimeout st) {
-            super(st);
-        }
+        lastSetTimer = mt.getTimeoutId();
     }
 
     public static class Init extends se.sics.kompics.Init<MonitorComp> {

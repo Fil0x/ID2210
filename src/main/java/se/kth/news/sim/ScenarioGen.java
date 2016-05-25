@@ -19,7 +19,6 @@ package se.kth.news.sim;
 
 import java.util.HashMap;
 import java.util.Map;
-import se.kth.news.core.news.NewsComp;
 import se.kth.news.sim.compatibility.SimNodeIdExtractor;
 import se.kth.news.system.HostMngrComp;
 import se.sics.kompics.network.Address;
@@ -165,7 +164,7 @@ public class ScenarioGen {
                 StochasticProcess startPeers = new StochasticProcess() {
                     {
                         eventInterArrivalTime(uniform(1000, 1100));
-                        raise(NewsComp.NUMBER_OF_NODES, startNodeOp, new BasicIntSequentialDistribution(1));
+                        raise(ScenarioSetup.NUMBER_OF_NODES, startNodeOp, new BasicIntSequentialDistribution(1));
                     }
                 };
                 StochasticProcess killPeer = new StochasticProcess() {

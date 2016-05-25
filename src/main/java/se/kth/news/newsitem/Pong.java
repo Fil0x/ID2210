@@ -15,17 +15,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.kth.news.play;
+package se.kth.news.newsitem;
+
+import java.io.Serializable;
 
 public class Pong {
 
-    private int seqNum;
+    public final int seqNum;
 
     public Pong(int seqNum) {
         this.seqNum = seqNum;
-    }
-
-    public int getSeqNum() {
-        return seqNum;
     }
 }

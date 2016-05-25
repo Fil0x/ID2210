@@ -35,10 +35,8 @@ import se.sics.ktoolbox.omngr.bootstrap.BootstrapClientComp;
 import se.sics.ktoolbox.overlaymngr.OverlayMngrComp;
 import se.sics.ktoolbox.overlaymngr.OverlayMngrPort;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.nat.NatAwareAddress;
-import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdate;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 
 /**

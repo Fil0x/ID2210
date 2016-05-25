@@ -21,21 +21,19 @@ import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.news.core.SubComponent;
+import se.kth.news.core.Utils;
 import se.kth.news.core.leader.LeaderSelectPort;
 import se.kth.news.core.leader.LeaderUpdate;
 import se.kth.news.core.news.util.NewsView;
-import se.kth.news.core.news.util.NewsViewComparator;
-import se.kth.news.play.Ping;
-import se.kth.news.play.Pong;
+import se.kth.news.newsitem.Ping;
+import se.kth.news.newsitem.Pong;
+import se.kth.news.sim.ScenarioSetup;
 import se.sics.kompics.ClassMatchedHandler;
-import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
-import se.sics.kompics.network.Network;
-import se.sics.kompics.network.Transport;
-import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.croupier.CroupierPort;
 import se.sics.ktoolbox.croupier.event.CroupierSample;
 import se.sics.ktoolbox.gradient.GradientPort;
@@ -44,29 +42,21 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
-import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
-import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.ktoolbox.util.other.Container;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdate;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 
-public class NewsComp extends ComponentDefinition {
+public class NewsComp extends SubComponent {
 
-    //*******************************NODE_SETUP*********************************
-    public static final int NUMBER_OF_NODES = 100;
-    public static final int TTL = -1;
-    //*******************************LOGGING************************************
     private static final Logger LOG = LoggerFactory.getLogger(NewsComp.class);
     private String logPrefix = " ";
+
     //*******************************CONNECTIONS********************************
-    Positive<Timer> timerPort = requires(Timer.class);
-    Positive<Network> networkPort = requires(Network.class);
     Positive<CroupierPort> croupierPort = requires(CroupierPort.class);
     Positive<GradientPort> gradientPort = requires(GradientPort.class);
     Positive<LeaderSelectPort> leaderPort = requires(LeaderSelectPort.class);
     Negative<OverlayViewUpdatePort> viewUpdatePort = provides(OverlayViewUpdatePort.class);
     //*******************************EXTERNAL_STATE*****************************
-    private KAddress selfAdr;
     private Identifier gradientOId;
     //*******************************INTERNAL_STATE*****************************
     private List<Container<KAddress, NewsView>> fingers;
@@ -97,6 +87,7 @@ public class NewsComp extends ComponentDefinition {
         subscribe(handleNewsPush, networkPort);
     }
 
+    //*******************************HANDLERS***********************************
     Handler handleStart = new Handler<Start>() {
         @Override
         public void handle(Start event) {
@@ -104,19 +95,6 @@ public class NewsComp extends ComponentDefinition {
             updateLocalNewsView();
         }
     };
-
-    private void updateLocalNewsView() {
-        int utility = news2.size();
-        if (selfAdr.getId().toString().equals("3") ) {
-            utility += 450;
-        }
-        if (selfAdr.getId().toString().equals("5") ) {
-            utility += 500;
-        }
-        NewsView localNewsView = new NewsView(selfAdr.getId(), utility);
-        LOG.debug("{}informing overlays of new view", logPrefix);
-        trigger(new OverlayViewUpdate.Indication<>(gradientOId, false, localNewsView.copy()), viewUpdatePort);
-    }
 
     Handler handleCroupierSample = new Handler<CroupierSample<NewsView>>() {
         @Override
@@ -144,7 +122,7 @@ public class NewsComp extends ComponentDefinition {
                         double coverageSum = 0;
                         for (int newsItem : newsCoverage.keySet()) {
                             int nodes = newsCoverage.get(newsItem).size();
-                            double nodesPercent = 100 * nodes / NUMBER_OF_NODES;
+                            double nodesPercent = 100 * nodes / ScenarioSetup.NUMBER_OF_NODES;
                             coverageSum += nodesPercent;
                         }
 
@@ -165,57 +143,9 @@ public class NewsComp extends ComponentDefinition {
 
                     if (sequenceNumber < 303) {
                         newsCoverage.put(sequenceNumber, new HashSet<String>());
-                        KHeader header = new BasicHeader(selfAdr, leaderAdr, Transport.UDP);
-                        KContentMsg msg = new BasicContentMsg(header, new Ping(selfAdr, sequenceNumber, TTL));
-                        trigger(msg, networkPort);
+                        triggerSend(leaderAdr, new Ping(selfAdr, sequenceNumber, null, ScenarioSetup.TTL));
                     }
                 }
-            }
-        }
-    };
-
-    private void newsPull() {
-        Container<KAddress, NewsView> highestFinger = getHighestFinger();
-        KHeader header = new BasicHeader(selfAdr, highestFinger.getSource(), Transport.UDP);
-        KContentMsg msg = new BasicContentMsg(header, new NewsPull());
-        trigger(msg, networkPort);
-    }
-
-    private Container<KAddress, NewsView> getHighestFinger() {
-        Container<KAddress, NewsView> highestFinger = fingers.get(0);
-        NewsViewComparator viewComparator = new NewsViewComparator();
-        for (int i = 1; i < fingers.size(); i++) {
-            if (viewComparator.compare(highestFinger.getContent(), fingers.get(i).getContent()) < 0) {
-                highestFinger = fingers.get(i);
-            }
-        }
-        return highestFinger;
-    }
-
-    ClassMatchedHandler handleNewsPull
-            = new ClassMatchedHandler<NewsPull, KContentMsg<?, ?, NewsPull>>() {
-        @Override
-        public void handle(NewsPull content, KContentMsg<?, ?, NewsPull> container) {
-            KHeader header = new BasicHeader(selfAdr, container.getHeader().getSource(), Transport.UDP);
-            KContentMsg msg = new BasicContentMsg(header, new NewsPush(news2, news2KAddress, news2SeqNum));
-            trigger(msg, networkPort);
-        }
-    };
-
-    ClassMatchedHandler handleNewsPush
-            = new ClassMatchedHandler<NewsPush, KContentMsg<?, ?, NewsPush>>() {
-        @Override
-        public void handle(NewsPush content, KContentMsg<?, ?, NewsPush> container) {
-            for (String newsItem : container.getContent().news2) {
-                news2KAddress.put(newsItem, container.getContent().news2KAddress.get(newsItem));
-                news2SeqNum.put(newsItem, container.getContent().news2SeqNum.get(newsItem));
-                news2.add(newsItem);
-                updateLocalNewsView();
-
-                // Send Pong
-                KHeader pongHeader = new BasicHeader(selfAdr, news2KAddress.get(newsItem), Transport.UDP);
-                KContentMsg pongMsg = new BasicContentMsg(pongHeader, new Pong(news2SeqNum.get(newsItem)));
-                trigger(pongMsg, networkPort);
             }
         }
     };
@@ -233,17 +163,16 @@ public class NewsComp extends ComponentDefinition {
 
         @Override
         public void handle(Ping content, KContentMsg<?, ?, Ping> container) {
-            LOG.debug("{} received ping from: {}", logPrefix, container.getHeader().getSource().getId());
-            String newsItem = content.getOrigin().getId() + ":" + content.getSeqNum();
-            news2KAddress.put(newsItem, content.getOrigin());
-            news2SeqNum.put(newsItem, content.getSeqNum());
+            KAddress source = container.getHeader().getSource();
+            LOG.debug("{} received ping from: {}", logPrefix, source.getId());
+            String newsItem = content.getIdentifier();
+            news2KAddress.put(newsItem, content.origin);
+            news2SeqNum.put(newsItem, content.seqNum);
             news2.add(newsItem);
             updateLocalNewsView();
 
             // Send Pong
-            KHeader pongHeader = new BasicHeader(selfAdr, news2KAddress.get(newsItem), Transport.UDP);
-            KContentMsg pongMsg = new BasicContentMsg(pongHeader, new Pong(news2SeqNum.get(newsItem)));
-            trigger(pongMsg, networkPort);
+            triggerSend(news2KAddress.get(newsItem), new Pong(news2SeqNum.get(newsItem)));
         }
     };
 
@@ -252,18 +181,58 @@ public class NewsComp extends ComponentDefinition {
 
         @Override
         public void handle(Pong content, KContentMsg<?, KHeader<?>, Pong> container) {
-            LOG.debug("{}received pong from:{}", logPrefix, container.getHeader().getSource().getId());
-            String sourceId = getId(container.getHeader().getSource());
-            newsCoverage.get(content.getSeqNum()).add(sourceId);
+            KAddress source = container.getHeader().getSource();
+            LOG.debug("{}received pong from:{}", logPrefix, source.getId());
+            String sourceId = source.getId().toString();
+            newsCoverage.get(content.seqNum).add(sourceId);
             if (nodeKnowledge.get(sourceId) == null) {
                 nodeKnowledge.put(sourceId, new HashSet<Integer>());
             }
-            nodeKnowledge.get(sourceId).add(content.getSeqNum());
+            nodeKnowledge.get(sourceId).add(content.seqNum);
         }
     };
 
-    private String getId(KAddress kAddress) {
-        return kAddress.getId().toString();
+    ClassMatchedHandler handleNewsPull
+            = new ClassMatchedHandler<NewsPull, KContentMsg<?, ?, NewsPull>>() {
+        @Override
+        public void handle(NewsPull content, KContentMsg<?, ?, NewsPull> container) {
+            KAddress source = container.getHeader().getSource();
+            triggerSend(source, new NewsPush(news2, news2KAddress, news2SeqNum));
+        }
+    };
+
+    ClassMatchedHandler handleNewsPush
+            = new ClassMatchedHandler<NewsPush, KContentMsg<?, ?, NewsPush>>() {
+        @Override
+        public void handle(NewsPush content, KContentMsg<?, ?, NewsPush> container) {
+            for (String newsItem : container.getContent().news2) {
+                news2KAddress.put(newsItem, container.getContent().news2KAddress.get(newsItem));
+                news2SeqNum.put(newsItem, container.getContent().news2SeqNum.get(newsItem));
+                news2.add(newsItem);
+                updateLocalNewsView();
+
+                // Send Pong
+                triggerSend(news2KAddress.get(newsItem), new Pong(news2SeqNum.get(newsItem)));
+            }
+        }
+    };
+
+    //*******************************HELP_FUNCTIONS*****************************
+    private void updateLocalNewsView() {
+        int utility = news2.size();
+        if (selfAdr.getId().toString().equals("3") ) {
+            utility += 450;
+        }
+        if (selfAdr.getId().toString().equals("5") ) {
+            utility += 500;
+        }
+        NewsView localNewsView = new NewsView(selfAdr.getId(), utility);
+        LOG.debug("{}informing overlays of new view", logPrefix);
+        trigger(new OverlayViewUpdate.Indication<>(gradientOId, false, localNewsView.copy()), viewUpdatePort);
+    }
+
+    private void newsPull() {
+        triggerSend(Utils.maxRank(fingers).getSource(), new NewsPull());
     }
 
     public static class Init extends se.sics.kompics.Init<NewsComp> {

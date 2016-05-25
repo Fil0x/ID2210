@@ -31,6 +31,9 @@ import se.sics.ktoolbox.util.network.nat.NatAwareAddressImpl;
  */
 public class ScenarioSetup {
 
+    public static final int NUMBER_OF_NODES = 100;
+    public static final int TTL = -1;
+
     public static final long scenarioSeed = 1234;
     public static final int appPort = 12345;
     public static final KAddress bootstrapServer;

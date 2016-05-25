@@ -15,35 +15,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.kth.news.play;
+package se.kth.news.newsitem;
 
 import se.sics.ktoolbox.util.network.KAddress;
 
 public class Ping {
 
-    private KAddress origin;
-    private int seqNum;
-    private int tTL;
+    public final KAddress origin;
+    public final int seqNum;
+    public final String content;
+    public int ttl;
 
-    public Ping(KAddress origin, int seqNum, int tTL) {
+    public Ping(KAddress origin, int seqNum, String content, int ttl) {
         this.origin = origin;
         this.seqNum = seqNum;
-        this.tTL = tTL;
+        this.content = content;
+        this.ttl = ttl;
     }
 
-    public KAddress getOrigin() {
-        return origin;
-    }
-
-    public int getSeqNum() {
-        return seqNum;
-    }
-
-    public int getTTL() {
-        return tTL;
-    }
-
-    public void decTTL() {
-        tTL--;
+    public String getIdentifier() {
+        return origin.getId() + ":" + seqNum;
     }
 }

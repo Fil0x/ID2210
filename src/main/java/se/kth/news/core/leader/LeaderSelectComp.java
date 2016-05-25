@@ -21,48 +21,38 @@ import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.news.core.SubComponent;
+import se.kth.news.core.Utils;
 import se.kth.news.core.epfd.MonitorRequest;
 import se.kth.news.core.epfd.MonitorPort;
 import se.kth.news.core.epfd.Restore;
 import se.kth.news.core.epfd.Suspect;
 import se.kth.news.core.news.util.NewsView;
 import se.sics.kompics.*;
-import se.sics.kompics.network.Network;
-import se.sics.kompics.network.Transport;
-import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.gradient.GradientPort;
 import se.sics.ktoolbox.gradient.event.TGradientSample;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
-import se.sics.ktoolbox.util.network.KHeader;
-import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
-import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.ktoolbox.util.other.Container;
 
-/**
- * @author Alex Ormenisan <aaor@kth.se>
- */
-public class LeaderSelectComp extends ComponentDefinition {
+public class LeaderSelectComp extends SubComponent {
 
     private static final Logger LOG = LoggerFactory.getLogger(LeaderSelectComp.class);
     private String logPrefix = " ";
 
     //*******************************CONNECTIONS********************************
-    Positive<Timer> timerPort = requires(Timer.class);
-    Positive<Network> networkPort = requires(Network.class);
     Positive<GradientPort> gradientPort = requires(GradientPort.class);
     Positive<MonitorPort> monitorPort = requires(MonitorPort.class);
     Negative<LeaderSelectPort> leaderPort = provides(LeaderSelectPort.class);
-    //*******************************EXTERNAL_STATE*****************************
-    private KAddress selfAdr;
     //*******************************INTERNAL_STATE*****************************
     private Comparator viewComparator;
     private NewsView selfView;
     private List<Container<KAddress, NewsView>> fingers;
-    private List<Container<KAddress, NewsView>> neighbors;
     private int sequenceNumber = 0;
+    private int sessionId = -1;
     private KAddress leaderAdr;
     private Set<KAddress> suspected = new HashSet<>();
+    private Set<KAddress> unconfirmed;
 
     public LeaderSelectComp(Init init) {
         selfAdr = init.selfAdr;
@@ -73,12 +63,14 @@ public class LeaderSelectComp extends ComponentDefinition {
 
         subscribe(handleStart, control);
         subscribe(handleGradientSample, gradientPort);
+        subscribe(handleSuspect, monitorPort);
+        subscribe(handleRestore, monitorPort);
+        subscribe(handleLeader2PC, networkPort);
         subscribe(handleLeaderPull, networkPort);
         subscribe(handleLeaderPush, networkPort);
-        subscribe(handleRestore, monitorPort);
-        subscribe(handleSuspect, monitorPort);
     }
 
+    //*******************************HANDLERS***********************************
     Handler handleStart = new Handler<Start>() {
         @Override
         public void handle(Start event) {
@@ -89,20 +81,23 @@ public class LeaderSelectComp extends ComponentDefinition {
     Handler handleGradientSample = new Handler<TGradientSample>() {
         @Override
         public void handle(TGradientSample sample) {
+            sequenceNumber += 1;
+
             LOG.debug("{}neighbours:{}", logPrefix, sample.gradientNeighbours);
             LOG.debug("{}fingers:{}", logPrefix, sample.gradientFingers);
             LOG.debug("{}local view:{}", logPrefix, sample.selfView);
 
             selfView = (NewsView) sample.selfView;
             fingers = sample.getGradientFingers();
-            neighbors = sample.getGradientNeighbours();
 
-            if (sequenceNumber == 100 && iAmTheLeader()) {
-                setLeader(selfAdr);
-            }
+            if (sequenceNumber > 100) {
+                updateMonitor();
 
-            if (sequenceNumber++ > 100 && !selfAdr.equals(leaderAdr)) {
-                leaderPull();
+                if (highestRank()) {
+                    initElection();
+                } else {
+                    leaderPull();
+                }
             }
         }
     };
@@ -110,18 +105,60 @@ public class LeaderSelectComp extends ComponentDefinition {
     Handler handleSuspect = new Handler<Suspect>() {
         @Override
         public void handle(Suspect event) {
-            LOG.debug("{} suspect: {}", logPrefix, event.node.getId());
-            suspected.add(event.node);
-            if (iAmTheLeader()) setLeader(selfAdr);
+             if (suspected.add(event.node)) {
+                 LOG.info("{} suspect: {}", logPrefix, event.node.getId());
+             }
         }
     };
 
     Handler handleRestore = new Handler<Restore>() {
         @Override
         public void handle(Restore event) {
-            LOG.debug("{} restore: {}", logPrefix, event.node.getId());
-            suspected.remove(event.node);
-            if (iAmTheLeader()) setLeader(selfAdr);
+            if (suspected.remove(event.node)) {
+                LOG.info("{} restore: {}", logPrefix, event.node.getId());
+            }
+        }
+    };
+
+    ClassMatchedHandler handleLeader2PC
+            = new ClassMatchedHandler<Leader2PC, KContentMsg<?, ?, Leader2PC>>() {
+        @Override
+        public void handle(Leader2PC content, KContentMsg<?, ?, Leader2PC> container) {
+            KAddress source = container.getHeader().getSource();
+            switch (content.header) {
+                case "canCommit?":
+                    Container<KAddress, NewsView> maxRank = Utils.maxRank(fingers, suspected);
+                    if (maxRank == null || viewComparator.compare(content.body, maxRank.getContent()) >= 0) {
+                        triggerSend(source, new Leader2PC(content.sid, "Yes", null));
+                    }
+                    else {
+                        triggerSend(source, new Leader2PC(content.sid, "No", null));
+                    }
+                    break;
+                case "Yes":
+                    if (content.sid == sessionId) {
+                        unconfirmed.remove(source);
+                        if (unconfirmed.isEmpty()) {
+                            triggerBroadcast(Utils.addressSet(fingers), new Leader2PC(sessionId, "doCommit", selfAdr));
+                            trustLeader(selfAdr);
+                        }
+                    }
+                    break;
+                case "No":
+                    if (content.sid == sessionId) {
+                        triggerBroadcast(Utils.addressSet(fingers), new Leader2PC(sessionId, "abortCommit", null));
+                    }
+                    break;
+                case "doCommit":
+                    trustLeader((KAddress) content.body);
+                    break;
+                /*case "abortCommit":
+                    break;
+                case "haveCommited":
+                    break;
+                default:
+                    break;*/
+            }
         }
     };
 
@@ -129,10 +166,9 @@ public class LeaderSelectComp extends ComponentDefinition {
             = new ClassMatchedHandler<LeaderPull, KContentMsg<?, ?, LeaderPull>>() {
         @Override
         public void handle(LeaderPull content, KContentMsg<?, ?, LeaderPull> container) {
+            KAddress source = container.getHeader().getSource();
             if (leaderAdr != null) {
-                KHeader header = new BasicHeader(selfAdr, container.getHeader().getSource(), Transport.UDP);
-                KContentMsg msg = new BasicContentMsg(header, new LeaderPush(leaderAdr));
-                trigger(msg, networkPort);
+                triggerSend(source, new LeaderPush(leaderAdr));
             }
         }
     };
@@ -141,76 +177,44 @@ public class LeaderSelectComp extends ComponentDefinition {
             = new ClassMatchedHandler<LeaderPush, KContentMsg<?, ?, LeaderPush>>() {
         @Override
         public void handle(LeaderPush content, KContentMsg<?, ?, LeaderPush> container) {
-            setLeader(container.getContent().leaderAdr);
+            trustLeader(container.getContent().leaderAdr);
         }
     };
 
-    private boolean iAmTheLeader() {
-        if (viewComparator.compare(selfView, getMaxRank(fingers, suspected).getContent()) < 0) {
-            return false;
-        } else {
-            return true;
-        }
+    //*******************************HELP_FUNCTIONS*****************************
+    private void updateMonitor() {
+        Set<KAddress> nodeToMonitor = new HashSet<>(Utils.addressSet(fingers));
+        if (leaderAdr != null) nodeToMonitor.add(leaderAdr);
+        trigger(new MonitorRequest(nodeToMonitor), monitorPort);
     }
 
-    private void setLeader(KAddress newLeaderAdr) {
+
+    private boolean highestRank() {
+        Container<KAddress, NewsView> maxRank = Utils.maxRank(fingers, suspected);
+        if (maxRank == null || viewComparator.compare(selfView, maxRank.getContent()) > 0) {
+            return true;
+        }
+        return false;
+    }
+
+    private void initElection() {
+        sessionId += 1;
+        unconfirmed = Utils.addressSet(fingers);
+        unconfirmed.removeAll(suspected);
+        triggerBroadcast(unconfirmed, new Leader2PC(sessionId, "canCommit?", selfView));
+    }
+
+    private void trustLeader(KAddress newLeaderAdr) {
         if (leaderAdr == null || !leaderAdr.equals(newLeaderAdr)) {
             leaderAdr = newLeaderAdr;
             trigger(new LeaderUpdate(leaderAdr), leaderPort);
-            if (!selfAdr.equals(leaderAdr)) {
-                trigger(new MonitorRequest(new HashSet<>(Arrays.asList(leaderAdr))), monitorPort);
-            }
         }
     }
 
     private void leaderPull() {
-        Container<KAddress, NewsView> highestFinger = getMaxRank(fingers);
-        KHeader header = new BasicHeader(selfAdr, highestFinger.getSource(), Transport.UDP);
-        KContentMsg msg = new BasicContentMsg(header, new LeaderPull());
-        trigger(msg, networkPort);
+        triggerSend(Utils.maxRank(fingers).getSource(), new LeaderPull());
     }
 
-    private Container<KAddress, NewsView> getMaxRank(List<Container<KAddress, NewsView>> nodes) {
-        return getMaxRank(nodes, new HashSet<KAddress>());
-    }
-
-    private Container<KAddress, NewsView> getMaxRank(List<Container<KAddress, NewsView>> nodes, Set<KAddress> ignore) {
-        Container<KAddress, NewsView> maxRank = null;
-        for (Container<KAddress, NewsView> c : nodes) {
-            if (!ignore.contains(c.getSource())) {
-                if (maxRank == null || viewComparator.compare(maxRank.getContent(), c.getContent()) < 0) {
-                    maxRank = c;
-                }
-            }
-        }
-        return maxRank;
-    }
-
-    /*private Set<KAddress> getAddressSet(List<Container<KAddress, NewsView>> containerList) {
-        Set<KAddress> addressSet = new HashSet<>();
-        for (Container<KAddress, NewsView> c : containerList) {
-            addressSet.add(c.getSource());
-        }
-        return addressSet;
-    }
-
-    private boolean hasLeaderNeighbor() {
-        for (int i = 0; i < neighbors.size(); i++) {
-            if (neighbors.get(i).getSource().equals(leaderAdr)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasLeaderFinger() {
-        for (int i = 0; i < fingers.size(); i++) {
-            if (fingers.get(i).getSource().equals(leaderAdr)) {
-                return true;
-            }
-        }
-        return false;
-    }*/
 
     public static class Init extends se.sics.kompics.Init<LeaderSelectComp> {
 
