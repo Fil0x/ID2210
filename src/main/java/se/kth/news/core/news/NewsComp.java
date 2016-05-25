@@ -150,7 +150,7 @@ public class NewsComp extends SubComponent {
                         System.out.println("node knowledge\t" + knowledgeSum / NUMBER_OF_NODES);
                         System.out.println("for each node\t" + knowledgeList);*/
 
-                        //System.out.println("unconfirmed: " + unconfirmed.size());
+                        System.out.println("unconfirmed: " + unconfirmed.size());
                     }
 
                     if (sequenceNumber < 303) {
