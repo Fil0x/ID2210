@@ -187,7 +187,6 @@ public class LeaderSelectComp extends SubComponent {
         trigger(new MonitorRequest(nodeToMonitor), monitorPort);
     }
 
-
     private boolean highestRank() {
         Container<KAddress, NewsView> maxRank = Utils.maxRank(fingers, suspected);
         if (maxRank == null || viewComparator.compare(selfView, maxRank.getContent()) > 0) {

@@ -17,8 +17,6 @@
  */
 package se.kth.news.newsitem;
 
-import java.io.Serializable;
-
 public class Pong {
 
     public final int seqNum;

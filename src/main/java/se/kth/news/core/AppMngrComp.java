@@ -45,6 +45,7 @@ public class AppMngrComp extends ComponentDefinition {
 
     private static final Logger LOG = LoggerFactory.getLogger(BootstrapClientComp.class);
     private String logPrefix = "";
+
     //*****************************CONNECTIONS**********************************
     Positive<OverlayMngrPort> omngrPort = requires(OverlayMngrPort.class);
     //***************************EXTERNAL_STATE*********************************

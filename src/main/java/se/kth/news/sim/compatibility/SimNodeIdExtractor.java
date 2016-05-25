@@ -27,6 +27,7 @@ import se.sics.ktoolbox.util.network.KAddress;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class SimNodeIdExtractor implements IdentifierExtractor {
+
     @Override
     public Identifier extract(Address adr) {
         KAddress usedAdr = (KAddress) adr;

@@ -23,6 +23,7 @@ import se.sics.kompics.simulator.network.identifier.Identifier;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class SimNodeIdentifier implements Identifier {
+
     public final int nodeId;
 
     public SimNodeIdentifier(int nodeId) {

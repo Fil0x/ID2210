@@ -26,6 +26,7 @@ import java.util.Comparator;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class NewsViewComparator implements Comparator<NewsView> {
+
     @Override
     public int compare(NewsView o1, NewsView o2) {
         if (o1 == o2) {

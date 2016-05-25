@@ -23,6 +23,7 @@ import se.sics.kompics.PortType;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LeaderSelectPort extends PortType {
+
     {
         indication(LeaderUpdate.class);
     }

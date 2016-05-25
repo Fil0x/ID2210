@@ -3,7 +3,6 @@ package se.kth.news.core;
 import se.kth.news.core.news.util.NewsView;
 import se.kth.news.core.news.util.NewsViewComparator;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.other.Container;
 
 import java.util.Comparator;
