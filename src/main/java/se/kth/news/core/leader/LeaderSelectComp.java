@@ -89,7 +89,7 @@ public class LeaderSelectComp extends ComponentDefinition {
             sequenceNumber += 1;
 
             LOG.debug("{}neighbours:{}", logPrefix, sample.gradientNeighbours);
-            LOG.debug("{}fingers2:{}", logPrefix, sample.gradientFingers);
+            LOG.debug("{}fingers:{}", logPrefix, sample.gradientFingers);
             LOG.debug("{}local view:{}", logPrefix, sample.selfView);
 
             selfView = (NewsView) sample.selfView;
