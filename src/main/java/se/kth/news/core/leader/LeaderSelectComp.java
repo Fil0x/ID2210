@@ -93,7 +93,8 @@ public class LeaderSelectComp extends ComponentDefinition {
             LOG.debug("{}local view:{}", logPrefix, sample.selfView);
 
             selfView = (NewsView) sample.selfView;
-            acquaintances = Utils.merge(sample.getGradientFingers(), sample.getGradientNeighbours());
+            //acquaintances = Utils.merge(sample.getGradientFingers(), sample.getGradientNeighbours());
+            acquaintances = sample.getGradientFingers();
 
             if (sequenceNumber > 100) {
                 if (highestRank()) {
