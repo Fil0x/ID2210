@@ -53,7 +53,7 @@ import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 public class NewsComp extends ComponentDefinition {
 
     //*******************************NODE_SETUP*********************************
-    public static final int NUMBER_OF_NODES = 20;
+    public static final int NUMBER_OF_NODES = 100;
     public static final int TTL = -1;
     public static final boolean CHEATING = false;
     //*******************************LOGGING************************************
@@ -156,13 +156,13 @@ public class NewsComp extends ComponentDefinition {
                             knowledgeList.add((int) newsPercent);
                         }
 
-                        /*System.out.println("\nnumber of news\t" + numberOfNews);
+                        System.out.println("\nnumber of news\t" + numberOfNews);
                         System.out.println("news coverage\t" + coverageSum / numberOfNews);
                         System.out.println("node knowledge\t" + knowledgeSum / NUMBER_OF_NODES);
-                        System.out.println("for each node\t" + knowledgeList);*/
+                        System.out.println("for each node\t" + knowledgeList);
                     }
 
-                    if (sequenceNumber < 303) {
+                    if (sequenceNumber < 304) {
                         newsCoverage.put(sequenceNumber, new HashSet<String>());
                         KHeader header = new BasicHeader(selfAdr, leaderAdr, Transport.UDP);
                         KContentMsg msg = new BasicContentMsg(header, new Ping(selfAdr, sequenceNumber, TTL));
