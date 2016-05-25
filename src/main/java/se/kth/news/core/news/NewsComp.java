@@ -21,6 +21,7 @@ import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.kth.news.core.Utils;
 import se.kth.news.core.leader.LeaderSelectPort;
 import se.kth.news.core.leader.LeaderUpdate;
 import se.kth.news.core.news.util.NewsView;
@@ -70,8 +71,7 @@ public class NewsComp extends ComponentDefinition {
     private KAddress selfAdr;
     private Identifier gradientOId;
     //*******************************INTERNAL_STATE*****************************
-    private List<Container<KAddress, NewsView>> fingers;
-    private List<Container<KAddress, NewsView>> neighbors;
+    private List<Container<KAddress, NewsView>> acquaintances;
     private int sequenceNumber = 0;
     private KAddress leaderAdr;
     private Map<Integer, Set<String>> newsCoverage = new HashMap<>();  // news item -> {nodes}
@@ -128,8 +128,9 @@ public class NewsComp extends ComponentDefinition {
         @Override
         public void handle(TGradientSample sample) {
 
-            fingers = sample.getGradientFingers();
-            neighbors = sample.getGradientNeighbours();
+            //acquaintances = Utils.merge(sample.getGradientFingers(), sample.getGradientNeighbours());
+            acquaintances = sample.getGradientNeighbours();
+
             sequenceNumber += 1;
 
             if (leaderAdr != null) {
@@ -174,21 +175,9 @@ public class NewsComp extends ComponentDefinition {
     };
 
     private void newsPull() {
-        Container<KAddress, NewsView> highestFinger = getHighestFinger();
-        KHeader header = new BasicHeader(selfAdr, highestFinger.getSource(), Transport.UDP);
+        KHeader header = new BasicHeader(selfAdr, Utils.maxRank(acquaintances).getSource(), Transport.UDP);
         KContentMsg msg = new BasicContentMsg(header, new NewsPull());
         trigger(msg, networkPort);
-    }
-
-    private Container<KAddress, NewsView> getHighestFinger() {
-        Container<KAddress, NewsView> highestFinger = fingers.get(0);
-        NewsViewComparator viewComparator = new NewsViewComparator();
-        for (int i = 1; i < fingers.size(); i++) {
-            if (viewComparator.compare(highestFinger.getContent(), fingers.get(i).getContent()) < 0) {
-                highestFinger = fingers.get(i);
-            }
-        }
-        return highestFinger;
     }
 
     ClassMatchedHandler handleNewsPull
