@@ -50,8 +50,8 @@ import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 public class NewsComp extends ComponentDefinition {
 
     //*******************************NODE_SETUP*********************************
-    public static final int NUMBER_OF_NODES = 100;
-    public static final int TTL = 5;
+    public static final int NUMBER_OF_NODES = 250;
+    public static final int TTL = 40;
     //*******************************LOGGING************************************
     private static final Logger LOG = LoggerFactory.getLogger(NewsComp.class);
     private String logPrefix = " ";
@@ -133,7 +133,7 @@ public class NewsComp extends ComponentDefinition {
                 System.out.println("\nnumber of news\t" + numberOfNews);
                 System.out.println("news coverage\t" + (int) coverageSum / numberOfNews);
                 System.out.println("node knowledge\t" + (int) knowledgeSum / NUMBER_OF_NODES);
-                System.out.println("for each node\t" + knowledgeList);
+                // System.out.println("for each node\t" + knowledgeList);
             }
 
             // Disseminate "news"
