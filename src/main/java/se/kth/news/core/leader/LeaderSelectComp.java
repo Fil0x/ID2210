@@ -108,6 +108,9 @@ public class LeaderSelectComp extends SubComponent {
         public void handle(Suspect event) {
             if (suspected.add(event.node)) {
                 LOG.info("{} suspect: {}", logPrefix, event.node.getId());
+                if (leaderAdr != null && event.node.sameHostAs(leaderAdr)) {
+                    leaderAdr = null;
+                }
             }
         }
     };
