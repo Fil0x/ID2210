@@ -2,7 +2,7 @@ package se.kth.news.core.leader;
 
 public class Leader2PC {
 
-    public final int sid;
+    public final int sid; // session id
     public final String header;
     public final Object body;
 
