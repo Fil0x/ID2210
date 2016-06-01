@@ -61,6 +61,8 @@ public class LeaderSelectComp extends ComponentDefinition {
     private int sessionId = -1;
     private Set<KAddress> unconfirmed;
 
+    private int becameLeader;
+
     public LeaderSelectComp(Init init) {
         selfAdr = init.selfAdr;
         logPrefix = "<nid:" + selfAdr.getId() + ">";
@@ -73,6 +75,7 @@ public class LeaderSelectComp extends ComponentDefinition {
         subscribe(handleLeader2PC, networkPort);
         subscribe(handleLeaderPull, networkPort);
         subscribe(handleLeaderPush, networkPort);
+        subscribe(handleLeaderPong, networkPort);
     }
 
     //*******************************HANDLERS***********************************
@@ -94,7 +97,7 @@ public class LeaderSelectComp extends ComponentDefinition {
 
             selfView = (NewsView) sample.selfView;
             //acquaintances = Utils.merge(sample.getGradientFingers(), sample.getGradientNeighbours());
-            acquaintances = sample.getGradientFingers();
+            acquaintances = sample.getGradientNeighbours();
 
             if (sequenceNumber > 100) {
                 if (highestRank()) {
@@ -127,6 +130,7 @@ public class LeaderSelectComp extends ComponentDefinition {
                         if (unconfirmed.isEmpty()) {
                             triggerBroadcast(Utils.addressSet(acquaintances), new Leader2PC(sessionId, "doCommit", selfAdr));
                             trustLeader(selfAdr);
+                            becameLeader = sequenceNumber;
                         }
                     }
                     break;
@@ -169,6 +173,15 @@ public class LeaderSelectComp extends ComponentDefinition {
         }
     };
 
+    ClassMatchedHandler handleLeaderPong
+            = new ClassMatchedHandler<LeaderPong, KContentMsg<?, ?, LeaderPong>>() {
+        @Override
+        public void handle(LeaderPong content, KContentMsg<?, ?, LeaderPong> container) {
+            System.out.println(sequenceNumber - becameLeader);
+        }
+    };
+
+
     //*******************************HELP_FUNCTIONS*****************************
     private boolean highestRank() {
         Container<KAddress, NewsView> maxRank = Utils.maxRank(acquaintances);
@@ -188,6 +201,7 @@ public class LeaderSelectComp extends ComponentDefinition {
         if (leaderAdr == null || !leaderAdr.equals(newLeaderAdr)) {
             leaderAdr = newLeaderAdr;
             trigger(new LeaderUpdate(leaderAdr), leaderPort);
+            triggerSend(leaderAdr, new LeaderPong());
         }
     }
 

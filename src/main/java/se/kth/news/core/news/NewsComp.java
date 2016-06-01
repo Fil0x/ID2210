@@ -126,7 +126,7 @@ public class NewsComp extends ComponentDefinition {
     Handler handleLeader = new Handler<LeaderUpdate>() {
         @Override
         public void handle(LeaderUpdate event) {
-            LOG.info("{} new leader: {}", logPrefix, event.leaderAdr.getId());
+            LOG.debug("{} new leader: {}", logPrefix, event.leaderAdr.getId());
         }
     };
 
